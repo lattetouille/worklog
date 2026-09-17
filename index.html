@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Work Pace</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+  :root {
+    --ground:#E3EEF1; --surface:#FFFFFF; --sunken:#EFF5F7;
+    --ink:#0F1416; --ink-2:#5E7278; --ink-3:#556970;
+    --line:#E4EDEF;
+    --hero:#11181A; --hero-ink:#F2FAFB; --hero-2:#8CA3A8;
+    --hero-track:rgba(255,255,255,.14); --hero-line:rgba(255,255,255,.1);
+    --cyan:#17BAC6; --cyan-soft:#DFF5F7; --pink:#FF6DC2; --pink-soft:#FFE7F4;
+    /* 칠(--cyan/--pink)과 글자(--*-ink)를 나눕니다. 칠은 3:1, 글자는 4.5:1이 기준 */
+    --cyan-ink:#0A7079; --pink-ink:#B81C72;
+    --hero-cyan:#3EE3EC; --hero-pink:#FF8FD0;      /* 히어로 배경이 테마마다 뒤집힙니다 */
+    --go:#16B863;
+    --cell-ink:#04262A; --cell-max:1;              /* 히트맵: 밝은 칠 + 어두운 숫자 */
+    --lift:0 1px 2px rgba(10,48,54,.06), 0 8px 20px rgba(10,48,54,.06);
+    --r-lg:26px; --r-md:18px; --r-sm:12px;
+    --display:'Bricolage Grotesque','Noto Sans KR',system-ui,sans-serif;
+    --body:'Noto Sans KR',system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#080E10; --surface:#182427; --sunken:#101B1E;
+      --ink:#E9F5F7; --ink-2:#93A9AE; --ink-3:#93A7AC;
+      --line:#213033;
+      --hero:#EAF5F7; --hero-ink:#0F1518; --hero-2:#55686D;
+      --hero-track:rgba(15,21,24,.12); --hero-line:rgba(15,21,24,.1);
+      --cyan:#3EE3EC; --cyan-soft:#123338; --pink:#FF8FD0; --pink-soft:#381B2C;
+      --cyan-ink:#5AEAF2; --pink-ink:#FFA8DA;
+      --hero-cyan:#0B6E77; --hero-pink:#B0246C;    /* 다크에선 히어로가 밝은 판이라 진한 색 */
+      --go:#3BD98A;
+      --cell-ink:#E9F5F7; --cell-max:.62;          /* 어두운 바탕: 옅은 칠 + 밝은 숫자 */
+      --lift:none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#080E10; --surface:#182427; --sunken:#101B1E;
+    --ink:#E9F5F7; --ink-2:#93A9AE; --ink-3:#93A7AC;
+    --line:#213033;
+    --hero:#EAF5F7; --hero-ink:#0F1518; --hero-2:#55686D;
+    --hero-track:rgba(15,21,24,.12); --hero-line:rgba(15,21,24,.1);
+    --cyan:#3EE3EC; --cyan-soft:#123338; --pink:#FF8FD0; --pink-soft:#381B2C;
+    --cyan-ink:#5AEAF2; --pink-ink:#FFA8DA;
+    --hero-cyan:#0B6E77; --hero-pink:#B0246C;
+    --go:#3BD98A;
+    --cell-ink:#E9F5F7; --cell-max:.62;
+    --lift:none;
+  }
+
+  /* 타이포 규칙 (옵션 B)
+     33 히어로 대표 숫자 · 21 카드 대표 숫자/제목 · 15 값·본문·조작 · 12.5 라벨·보조 · 11 캡션
+     예외: 입력창 17px — iOS Safari가 16px 미만에서 화면을 확대함
+     굵기: 400 본문 / 500 라벨·축 / 700 제목·버튼·배지 / 800 대표 숫자 전용
+     자간: 21px 이상 -.02em, 33px -.03em */
+  /* 로그인 화면 */
+  #gate { min-height:100dvh; display:grid; place-items:center; padding:24px; }
+  .gate-card { background:var(--surface); box-shadow:var(--lift); border-radius:var(--r-lg);
+               padding:32px 26px; max-width:380px; width:100%; text-align:center; }
+  .gate-card h1 { font-family:var(--display); font-size:21px; font-weight:700; letter-spacing:-.02em; }
+  .gate-card p { font-size:15px; color:var(--ink-2); line-height:1.65; margin:10px 0 22px; }
+  .gate-card .hint { margin:16px 0 0; }
+  #g-login { width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+             background:var(--ink); color:var(--surface); border-radius:var(--r-md);
+             padding:15px; font-size:15px; font-weight:700; }
+  #g-login svg { width:19px; height:19px; background:#fff; border-radius:3px; padding:1px; }
+
+  * { box-sizing:border-box; }
+  body { background:var(--ground); color:var(--ink); font-family:var(--body); margin:0; -webkit-font-smoothing:antialiased; }
+  /* 아래 16px은 하단바 위 페이드(.sticky::before)가 앉을 자리입니다.
+     없으면 다 내려도 마지막 카드가 그만큼 가려집니다 */
+  .app { max-width:460px; margin:0 auto; padding:20px 18px 16px; display:flex; flex-direction:column; gap:13px; }
+  h1,h2,h3 { margin:0; text-wrap:balance; }
+  button { font-family:inherit; cursor:pointer; border:0; }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline:2.5px solid var(--cyan-ink); outline-offset:2px; }
+  .num { font-family:var(--display); font-variant-numeric:tabular-nums; font-weight:800; letter-spacing:-.02em; }
+  .eyebrow { font-size:12.5px; margin:0; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 4px 2px; }
+  .top h1 { font-family:var(--display); font-size:21px; font-weight:700; letter-spacing:-.02em; line-height:1; }
+  .top-right { display:flex; align-items:center; gap:8px; }
+  .gear { width:44px; height:44px; border-radius:14px; background:var(--surface); box-shadow:var(--lift);
+          color:var(--ink-2); display:grid; place-items:center; flex:none; }
+  .gear svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  /* 근무 장소 — 출근바 카드 안. 떠 있으면 뒤 콘텐츠가 틈으로 비칩니다 */
+  .places { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .places button { background:var(--sunken); color:var(--ink-3);
+                   border-radius:12px; padding:9px 4px; font-size:12.5px; font-weight:700;
+                   display:flex; align-items:center; justify-content:center; gap:6px; }
+  .places button i { font-style:normal; font-size:15px; }
+  .places button[aria-pressed="true"] { background:var(--cyan-soft); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--cyan); }
+  .top h1 .dow { font-size:15px; font-weight:500; color:var(--ink-3); margin-left:9px; letter-spacing:0; }
+  .top h1 .dow.wknd { color:var(--pink-ink); }
+
+  /* ── 이번 달 총계 (히어로) ── */
+  .hero { background:var(--hero); color:var(--hero-ink); border-radius:var(--r-lg); padding:22px; }
+  .hero-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:15px; }
+  .hero-head .eyebrow { color:var(--hero-2); }
+  .hero-head .range { font-size:12.5px; color:var(--hero-2); font-variant-numeric:tabular-nums; }
+  .total { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .total .filled { font-size:33px; line-height:1; letter-spacing:-.03em; }   /* 28px 이상은 -.03em */
+  .total .goal { font-size:15px; font-weight:700; color:var(--hero-2); font-family:var(--display); font-variant-numeric:tabular-nums; }
+  .bar { height:10px; border-radius:99px; background:var(--hero-track); margin:16px 0 11px; position:relative; }
+  .bar > span { position:absolute; inset:0 auto 0 0; border-radius:99px; background:linear-gradient(90deg,var(--cyan),var(--pink)); transition:width .45s cubic-bezier(.3,1,.4,1); }
+  .bar > i { position:absolute; top:-4px; bottom:-4px; width:2.5px; border-radius:2px; background:var(--hero-ink); opacity:.75; transform:translateX(-50%); }
+  .hero-left { font-size:12.5px; color:var(--hero-2); }
+  .hero-pace { font-size:12.5px; font-weight:700; margin-top:4px; }
+  .hero-pace.ahead { color:var(--hero-cyan); } .hero-pace.behind { color:var(--hero-pink); } .hero-pace.on { color:var(--hero-2); }
+  .ot-block { margin-top:17px; padding-top:15px; border-top:1px solid var(--hero-line); display:flex; flex-direction:column; gap:9px; }
+  .ot-line { display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-size:12.5px; color:var(--hero-2); }
+  .ot-line b { font-family:var(--display); font-variant-numeric:tabular-nums; font-size:15px; font-weight:700; color:var(--hero-ink); }
+  .ot-line.prem b { color:var(--hero-pink); }
+  .ot-note { font-size:11px; color:var(--hero-2); line-height:1.55; opacity:.85; }
+
+  /* ── 카드 ── */
+  .card { background:var(--surface); box-shadow:var(--lift); border-radius:var(--r-lg); padding:20px; }
+  .card.tint { background:var(--pink-soft); box-shadow:none; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .card-head .eyebrow { color:var(--ink-3); }
+  .card.tint .card-head .eyebrow { color:var(--pink-ink); }
+  .card-head .range { font-size:12.5px; color:var(--ink-3); font-weight:500; }
+  .card.today { display:block; width:100%; text-align:left; color:inherit; }
+  .today-main { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .today-main .num { font-size:33px; letter-spacing:-.03em; }
+  .today-main .num.goal { color:var(--cyan-ink); }     /* 목표를 채우는 퇴근 시각 */
+  .today-main .num.done { color:var(--go); }       /* 이미 충족 */
+  .today-sub { font-size:12.5px; color:var(--ink-3); }
+
+
+  .quick { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .quick button { background:var(--surface); box-shadow:var(--lift); color:var(--ink); border-radius:var(--r-md); padding:15px 14px; font-size:15px; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px; }
+  .quick button .ico { width:30px; height:30px; border-radius:10px; display:grid; place-items:center; font-size:15px; flex:none; }
+  .quick .v .ico { background:var(--pink-soft); }
+  .quick .m .ico { background:var(--cyan-soft); }
+
+  /* ── 연차 · 보상휴가 ── */
+  .leave { display:block; width:100%; text-align:left; color:inherit; }
+  .lv-main { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .lv-num { font-family:var(--display); font-size:21px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .lv-unit { font-size:12.5px; color:var(--ink-3); font-weight:700; margin-left:6px; }
+  .lv-used { font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; text-align:right; line-height:1.55; }
+  .bar.flat { background:var(--sunken); margin:15px 0 0; }
+  .bar.flat > span { background:linear-gradient(90deg,var(--pink),var(--cyan)); }
+  .cp-soon { font-size:12.5px; color:var(--ink-2); margin-top:9px; font-variant-numeric:tabular-nums; line-height:1.6; }
+  .cp-flag { font-size:12.5px; font-weight:700; color:var(--pink-ink); margin-top:7px; }
+  .cp-note { font-size:11px; color:var(--ink-3); margin-top:11px; line-height:1.55; }
+  .chk { display:flex; align-items:center; gap:9px; flex-wrap:wrap; font-size:15px; font-weight:500; color:var(--ink-2); cursor:pointer; }
+  .chk input { width:19px; height:19px; accent-color:var(--cyan); flex:none; }
+  .chk.opt { font-size:12.5px; color:var(--ink-3); }
+  .chk.opt span { flex:1 0 100%; font-size:11px; margin:2px 0 0; padding-left:28px; }
+  .chk.opt:has(input:checked) { color:var(--ink-2); }
+
+  /* ── 달력 히트맵 ── */
+  .calhead, .cal { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
+  .calhead { margin-bottom:7px; }
+  .calhead span { text-align:center; font-size:11px; font-weight:500; color:var(--ink-3); }
+  .calhead span:nth-child(6), .calhead span:nth-child(7) { color:var(--pink-ink); }
+  .cell {
+    /* 7열이라 폭은 못 늘립니다. 높이로 탭 영역을 확보하되,
+       aspect-ratio가 높이에서 폭을 되계산해 칸을 넘지 않도록 폭을 고정합니다 */
+    width:100%; min-height:44px;
+    aspect-ratio:1; border-radius:9px; background:var(--sunken); padding:0; display:grid; place-items:center;
+    font-family:var(--display); font-size:12.5px; font-weight:700; color:var(--ink-3);
+    font-variant-numeric:tabular-nums; position:relative;
+  }
+  .cell.blank { background:none; pointer-events:none; }
+  .cell.rest { background:none; box-shadow:inset 0 0 0 1px var(--line); }
+  .cell.reg  { background:color-mix(in srgb, var(--cyan) calc(var(--a) * var(--cell-max) * 100%), var(--sunken)); color:var(--cell-ink); box-shadow:none; }
+  .cell.ot   { background:color-mix(in srgb, var(--pink) calc(var(--a) * var(--cell-max) * 100%), var(--sunken)); color:var(--cell-ink); box-shadow:none; }
+  .cell.vac  { background:var(--cyan-soft); color:var(--cyan-ink); box-shadow:inset 0 0 0 1.5px var(--cyan); }
+  .cell.now  { outline:2px solid var(--ink); outline-offset:-2px; }   /* box-shadow면 .vac 링을 덮어씀 */
+  .legend { display:flex; flex-wrap:wrap; gap:11px; margin-top:13px; font-size:11px; color:var(--ink-3); font-weight:500; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .legend i { width:10px; height:10px; border-radius:3px; display:block; }
+  .holbtn { width:100%; margin-top:13px; background:var(--sunken); color:var(--ink-2); border-radius:var(--r-sm); padding:14px; font-size:12.5px; font-weight:700; }
+
+  /* ── 주별 막대 ── */
+  .weeks { height:120px; display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:14px; }
+  .wk { height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; position:relative; }
+  .wk { background:none; padding:0; }
+  /* 옅은 칸 = 그 주 목표. 막대가 이걸 덮으면 달성, 넘으면 초과입니다 */
+  /* 막대(58%)보다 넓게 깔아, 실근무가 목표를 넘어도 목표 높이가 양옆으로 보입니다 */
+  .track { position:absolute; bottom:0; left:0; right:0;
+           background:var(--sunken); border-radius:7px 7px 3px 3px; }
+  .track.planned { box-shadow:inset 0 0 0 1.5px var(--cyan); }
+  .wklabs span.planned { color:var(--cyan-ink); }
+  /* 트랙과 같은 방식(absolute, left:0 right:0)으로 놓아야 반올림까지 똑같아 폭이 어긋나지 않습니다 */
+  .stack { position:absolute; bottom:0; left:0; right:0; display:flex; flex-direction:column-reverse;
+           border-radius:7px 7px 3px 3px; overflow:hidden; }
+  .seg.reg { background:var(--cyan); }
+  .seg.ot  { background:var(--pink); }
+  .wklabs { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:14px; margin-top:8px; }
+  .wklabs span { text-align:center; font-size:11px; font-weight:500; color:var(--ink-3); }
+
+  /* ── 기록 목록 ── */
+  .monthnav { display:flex; align-items:center; justify-content:space-between; padding:2px 4px 4px; }
+  .monthnav h2 { font-family:var(--display); font-size:21px; font-weight:700; letter-spacing:-.02em; }
+  .m-period { display:block; font-size:11px; font-weight:500; color:var(--ink-3); margin-top:3px; font-variant-numeric:tabular-nums; }
+  .monthnav button { background:var(--surface); box-shadow:var(--lift); width:44px; height:44px; border-radius:14px; color:var(--ink-2); font-size:15px; line-height:1; }
+  .mini { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .mini > div { min-width:0; }
+  .mini b { white-space:nowrap; }
+  .mini b u { font-size:13px; font-weight:700; text-decoration:none; margin:0 1px 0 .5px; }
+  .mini > * { background:var(--surface); box-shadow:var(--lift); border-radius:var(--r-md);
+              padding:13px; text-align:left; color:inherit; display:block; width:100%; }
+  .mini.two { grid-template-columns:1fr 1fr; }
+  .mini i { font-style:normal; display:block; font-size:11px; font-weight:500; color:var(--ink-3); margin-top:3px; }
+  .mini b { display:block; font-family:var(--display); font-size:21px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:4px; letter-spacing:-.02em; }
+  .mini span { font-size:11px; color:var(--ink-3); font-weight:500; }
+  /* 320px에선 21px로 "134시간 00분"이 카드를 넘어 단위가 잘립니다 */
+  @media (max-width:360px) { .mini b { font-size:17px; } .mini b u { font-size:11px; } }
+  .mini .p b { color:var(--pink-ink); }
+  .rowhead { display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px;
+             padding:11px 4px 9px; border-bottom:1px solid var(--line); }
+  /* 첫 줄은 어느 주인지, 둘째 줄은 얼마나 채웠는지 — 성격이 달라 크기·색으로 나눕니다 */
+  /* 좁으면 버튼이 아랫줄로 내려갑니다 — 두 줄짜리 제목 옆에 끼면 글자가 더 쪼개집니다 */
+  .rowhead-t { display:flex; flex-direction:column; gap:3px; flex:1 1 200px; min-width:0; }
+  /* 첫 줄은 위 카드 머리글(eyebrow + range)과 같은 규칙 */
+  #rowhead-wk { font-size:12.5px; font-weight:700; letter-spacing:.09em; color:var(--ink-3); }
+  #rowhead-wk i { font-style:normal; font-weight:500; letter-spacing:0; margin-left:8px;
+                  font-variant-numeric:tabular-nums; }
+  /* 둘째 줄도 카드 머리글의 range 와 같은 규칙. 라벨과 숫자를 한 스타일로 둡니다 */
+  #rowhead-sum { font-size:12.5px; font-weight:500; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  #rowhead-sum i { font-style:normal; margin-right:5px; }
+  #rowhead-sum i.g { margin-left:11px; }
+  .rowhead-acts { display:flex; gap:4px; flex:none; margin-left:auto; }
+  .rowhead button { background:none; color:var(--cyan-ink); font-family:inherit; font-size:12.5px;
+                    font-weight:700; padding:6px 6px; border-radius:8px; }
+  .wk[aria-pressed="true"] { outline:2px solid var(--ink); outline-offset:3px; border-radius:6px; }
+  .rows { display:flex; flex-direction:column; }
+  .row { display:grid; grid-template-columns:46px 1fr auto; align-items:center; gap:12px; padding:13px 4px; border-bottom:1px solid var(--line); background:none; width:100%; text-align:left; color:inherit; }
+  .rows .row:last-child { border-bottom:0; }
+  .row:hover { background:var(--sunken); }
+  .row:active { transform:scale(.995); }
+  .row .date { display:flex; flex-direction:column; gap:1px; }
+  .row .date b { font-family:var(--display); font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .row .date span { font-size:11px; font-weight:500; color:var(--ink-3); }
+  .row.wknd .date span { color:var(--pink-ink); }
+  .row .span { font-size:15px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+  .row .span em { font-style:normal; color:var(--ink-3); font-size:12.5px; display:block; margin-top:2px; }
+  .row .net { font-family:var(--display); font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+  .row .net i { font-style:normal; display:block; font-size:11px; color:var(--pink-ink); margin-top:2px; }
+  .tag { font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px; margin-left:6px; vertical-align:1px; }
+  .tag.ot { background:var(--pink-soft); color:var(--pink-ink); }
+  .tag.vc { background:var(--cyan-soft); color:var(--cyan-ink); }
+  .empty { padding:30px 10px; text-align:center; color:var(--ink-3); font-size:15px; line-height:1.7; }
+
+  .hint { font-size:12.5px; color:var(--ink-3); line-height:1.65; }
+
+  /* ── 시트 ── */
+  dialog { border:0; padding:0; background:var(--surface); color:var(--ink); border-radius:24px;
+           width:min(92vw,400px); max-height:90dvh; overflow:auto; margin:auto; }
+  dialog::backdrop { background:rgba(8,20,22,.45); }
+  .sheet { padding:22px; display:flex; flex-direction:column; gap:15px; }
+  .sheet h3 { font-family:var(--display); font-size:21px; font-weight:700; letter-spacing:-.02em; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field > label { font-size:12.5px; font-weight:700; color:var(--ink-3); letter-spacing:.04em; }
+  /* 17px: iOS Safari는 16px 미만 입력창에 포커스가 가면 화면을 확대해 버립니다 */
+  .field input, .field select { font-family:var(--body); font-size:17px; color:var(--ink); background:var(--sunken); border:1px solid transparent; border-radius:var(--r-sm); padding:12px 13px; width:100%; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .types { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .types label { text-align:center; padding:11px 3px; border-radius:var(--r-sm); background:var(--sunken); font-size:15px; font-weight:700; color:var(--ink-2); cursor:pointer; }
+  .types input { position:absolute; opacity:0; width:1px; height:1px; }
+  .types label:has(input:checked) { background:var(--cyan-soft); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--cyan); }
+  .types label:has(input:focus-visible) { outline:2.5px solid var(--cyan-ink); outline-offset:2px; }
+  .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:11px; }
+  .chips button { background:var(--sunken); color:var(--ink-2); border-radius:99px; padding:9px 4px; font-size:12.5px; font-weight:700; }
+  .chips button[aria-pressed="true"] { background:var(--pink-soft); color:var(--pink-ink); }
+  /* 긴 설정 시트에서 저장이 화면 밖으로 밀리지 않게 */
+  .sheet-foot { display:flex; gap:9px; margin-top:2px; position:sticky; bottom:-22px;
+                background:var(--surface); padding:12px 0; margin-bottom:-12px; }
+  .sheet-foot button[aria-disabled="true"] { opacity:.45; }
+  .sheet-foot button { flex:1; padding:14px; border-radius:var(--r-md); font-size:15px; font-weight:700; }
+  .btn-save { background:var(--ink); color:var(--surface); }
+  .btn-ghost { background:var(--sunken); color:var(--ink-2); flex:0 0 auto !important; padding-inline:18px !important; }
+  .btn-ghost.danger { background:var(--pink-soft); color:var(--pink-ink); }
+  .cfg-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  /* ── 근무 규정 설정 ── */
+  #cfg { width:min(94vw,430px); }
+  #cfg .sheet { max-height:86vh; overflow-y:auto; gap:0; }
+  .setup-q { padding:16px 0; border-top:1px solid var(--line); }
+  .setup-q:first-of-type { border-top:0; padding-top:4px; }
+  .setup-q h4 { font-size:15px; font-weight:700; margin:0 0 9px; }
+  .qnote { font-size:12.5px; color:var(--ink-3); line-height:1.55; margin:9px 0 0; }
+  .opts { display:grid; gap:7px; }
+  .opts.c3 { grid-template-columns:repeat(3,1fr); }
+  .opts.c4 { grid-template-columns:repeat(4,1fr); }
+  .opts button {
+    background:var(--sunken); color:var(--ink-2); border-radius:var(--r-sm);
+    padding:12px 11px; font-size:15px; font-weight:700; text-align:left; line-height:1.4;
+  }
+  .opts.c3 button, .opts.c4 button { text-align:center; padding:12px 4px; }
+  .opts button[aria-pressed="true"] { background:var(--cyan-soft); color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--cyan); }
+  .opts button b { display:block; font-size:15px; }
+  .opts button em { display:block; font-style:normal; font-weight:500; font-size:12.5px; color:var(--ink-3); margin-top:3px; line-height:1.5; }
+  .opts button[aria-pressed="true"] em { color:var(--ink-2); }
+  #c-preview { background:var(--sunken); border-radius:var(--r-sm); padding:12px 13px; margin:16px 0 0; }
+  .addrow { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end; }
+  .addrow button { background:var(--ink); color:var(--surface); border-radius:var(--r-sm); padding:12px 18px; font-size:15px; font-weight:700; }
+  .hollist { display:flex; flex-wrap:wrap; gap:7px; }
+  .holchip { background:var(--pink-soft); color:var(--pink-ink); border-radius:99px; padding:8px 13px; font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .holchip span { opacity:.6; margin-left:5px; }
+
+  /* ── 하단 고정 ── */
+  .sticky { position:sticky; bottom:0; display:flex; flex-direction:column; align-items:center;
+            pointer-events:none; padding:0 18px calc(12px + env(safe-area-inset-bottom));
+            background:var(--ground); }
+  /* 떠 있는 구간에서 콘텐츠가 띠 밑으로 사라질 때 잘린 선이 생기지 않게 */
+  .sticky::before { content:""; position:absolute; left:0; right:0; bottom:100%; height:16px;
+                    background:linear-gradient(to bottom, transparent, var(--ground)); }
+  .sticky > * { width:min(100%,424px); pointer-events:auto; }   /* 카드와 같은 폭 (460 − 18×2) */
+  .punchbar {
+    display:flex; flex-direction:column; gap:10px; background:var(--surface);
+    border-radius:var(--r-lg) var(--r-lg) 0 0; padding:12px 16px;
+    box-shadow:0 -1px 0 var(--line), 0 -10px 30px rgba(10,48,54,.09);
+  }
+  .pb-main { display:flex; align-items:center; gap:12px; }
+  .punchbar .l { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .punchbar .l b { font-family:var(--display); font-size:21px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .punchbar .l span { font-size:12.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .punchbar button { flex:0 0 56%; border-radius:16px; padding:15px 10px; font-size:15px; font-weight:700; text-align:center; transition:transform .12s ease; }
+  .punchbar button:active { transform:scale(.98); }
+  .punchbar button em { font-style:normal; font-size:15px; font-weight:700; opacity:.72; font-variant-numeric:tabular-nums; margin-left:7px; }
+  #btn-in { background:var(--cyan); color:#04242A; }
+  #btn-in.warn { background:var(--sunken); color:var(--ink-2); box-shadow:inset 0 0 0 1.5px var(--line); }
+  #btn-out { background:var(--go); color:#04220F; }
+  nav { display:flex; background:var(--surface); padding:9px 12px 10px;
+        border-top:1px solid var(--line); border-radius:0 0 var(--r-lg) var(--r-lg); }
+  nav button { flex:1; background:none; padding:8px; border-radius:14px; color:var(--ink-3); font-size:12.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; }
+  nav button[aria-selected="true"] { color:var(--ink); background:var(--sunken); }
+  nav svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* PC: 폭을 조금 넓히고, 하단 바를 화면에 붙이는 대신 떠 있는 카드로 */
+  @media (min-width:760px) {
+    .app { max-width:560px; }
+    .sticky > * { width:min(100%,524px); }
+  }
+
+  .toast-undo { background:none; color:var(--cyan); font:inherit; font-weight:700; margin-left:12px; padding:2px 4px; text-decoration:underline; }
+  .toast { position:fixed; left:50%; bottom:calc(var(--stick,180px) + 14px); transform:translateX(-50%); background:var(--hero); color:var(--hero-ink); padding:12px 18px; border-radius:99px; font-size:12.5px; font-weight:500; z-index:9; max-width:90vw; text-align:center; }
+  /* 상태 변화는 남기되 움직임만 줄입니다. 전역 0.01ms 킬은 피드백까지 없앱니다 */
+  @media (prefers-reduced-motion: reduce) {
+    .bar > span { transition-duration:.01ms; }
+    .punchbar button { transition:none; }
+    .punchbar button:active { transform:none; }
+  }
+  /* tabindex="-1" 패널은 클릭으로도 포커스됩니다. 키보드로 온 게 아니면 링을 그리지 않습니다 */
+  [role="tabpanel"]:focus { outline:none; }
+  [role="tabpanel"]:focus-visible { outline:2.5px solid var(--cyan-ink); outline-offset:-4px; }
+  [hidden] { display:none !important; }
+</style>
+
+<div id="gate" hidden>
+  <div class="gate-card">
+    <h1>Work Pace</h1>
+    <p>출퇴근을 기록하고 이번 주·이번 달 목표를 한눈에 확인하세요.</p>
+    <button id="g-login">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.7 5.2C42.2 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-6.7-5.2c-1.8 1.3-4.3 2.2-7.8 2.2-5.9 0-11-4-12.8-9.4l-7 5.4C7.8 41 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.2 28.3c-.5-1.4-.8-2.8-.8-4.3s.3-3 .8-4.3l-7-5.4C3.5 17.2 2.7 20.5 2.7 24s.8 6.8 1.5 9.7l7-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6-5.9C34.9 3.5 29.9 1 24 1 15.3 1 7.8 6 4.2 14.3l7 5.4C13 14.3 18.1 9.5 24 9.5z"/></svg>
+      Google로 시작하기
+    </button>
+    <p class="hint">기록은 본인 계정에만 저장되고 다른 사람은 볼 수 없습니다.</p>
+  </div>
+</div>
+
+<main class="app" id="app">
+  <header class="top">
+    <h1><span id="today-date">—</span><span class="dow" id="today-dow"></span></h1>
+    <div class="top-right">
+    <button class="gear" id="theme-toggle" aria-label="화면 테마"><svg id="theme-icon" viewBox="0 0 24 24"></svg></button>
+    <button class="gear" id="cfg-open" aria-label="설정">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 8.9 19a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 5 8.9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    </div>
+  </header>
+
+  <!-- ══ 오늘 ══ -->
+  <section id="tab-today" role="tabpanel" aria-labelledby="nav-today" tabindex="-1" style="display:flex;flex-direction:column;gap:13px">
+    <div class="hero">
+      <div class="hero-head">
+        <h2 class="eyebrow" id="m-eyebrow">채운 시간</h2>
+        <span class="range" id="m-range">—</span>
+      </div>
+      <div class="total">
+        <span class="num filled" id="m-filled">0시간 00분</span>
+        <span class="goal" id="m-goal">/ 0시간 00분</span>
+      </div>
+      <div class="bar"><span id="m-bar" style="width:0"></span><i id="m-pace" hidden></i></div>
+      <div class="hero-left" id="m-left">—</div>
+      <div class="hero-pace" id="m-pace-txt">—</div>
+
+      <div class="ot-block" id="ot-block" hidden>
+        <div class="ot-line"><span>휴일·야간 근로</span><b id="ot-raw">—</b></div>
+        <div class="ot-line prem"><span>가산 환산</span><b id="ot-prem">—</b></div>
+        <p class="ot-note">휴일근로 8시간까지 ×1.5, 8시간 초과분 ×2 (근로기준법 제56조).</p>
+      </div>
+    </div>
+
+    <button class="card today" id="today-card">
+      <div class="card-head">
+        <h2 class="eyebrow" id="today-label">오늘</h2>
+      </div>
+      <div class="today-main">
+        <span class="num" id="today-net">—</span>
+        <span class="today-sub" id="today-sub">—</span>
+      </div>
+      <div class="bar flat"><span id="today-bar" style="width:0"></span></div>
+    </button>
+
+    <div class="mini two">
+      <button id="scope-tile"><span id="scope-lab">이번 달</span><b id="scope-val">—</b><i id="scope-sub"></i></button>
+      <button id="t-leave-tile"><span>연차 잔여</span><b id="t-leave">—</b><i id="t-leave-sub"></i></button>
+    </div>
+
+    <div class="card" id="ot-card" hidden>
+      <div class="card-head">
+        <h2 class="eyebrow">연장근로 정산</h2>
+        <span class="range" id="ot-due">—</span>
+      </div>
+      <div class="lv-main">
+        <span><span class="lv-num" id="ot-paid">—</span><span class="lv-unit">지급 예정</span></span>
+        <span class="lv-used" id="ot-over">—</span>
+      </div>
+      <p class="cp-note" id="ot-basis">—</p>
+      <p class="cp-flag" id="ot-cap" hidden>—</p>
+    </div>
+
+    <div class="card tint" id="comp-card" hidden>
+      <div class="card-head">
+        <h2 class="eyebrow">보상휴가</h2>
+        <span class="range">휴일근로 가산분 적립</span>
+      </div>
+      <div class="lv-main">
+        <span><span class="lv-num" id="cp-left">—</span><span class="lv-unit">사용 가능</span></span>
+      </div>
+      <p class="cp-soon" id="cp-soon">—</p>
+      <p class="cp-flag" id="cp-exp" hidden>—</p>
+      <p class="cp-flag" id="cp-over" hidden>—</p>
+      <p class="cp-note">적립된 달로부터 2개월 안에 쓰지 않으면 소멸합니다. 휴가 등록에서 <b>보상</b>을 고르면 여기서 차감돼요.</p>
+    </div>
+
+    <div class="quick">
+      <button class="v" id="q-vac"><span class="ico">🌴</span>휴가 등록</button>
+      <button class="m" id="q-manual"><span class="ico">✏️</span>근무 직접 입력</button>
+    </div>
+  </section>
+
+  <!-- ══ 기록 ══ -->
+  <section id="tab-log" role="tabpanel" aria-labelledby="nav-log" tabindex="-1" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="monthnav">
+      <button id="m-prev" aria-label="이전 달">‹</button>
+      <div style="text-align:center">
+        <h2 id="m-title">—</h2>
+        <span class="m-period" id="m-period" hidden>—</span>
+      </div>
+      <button id="m-next" aria-label="다음 달">›</button>
+    </div>
+
+    <div class="mini">
+      <div><span>정규 근무</span><b id="s-reg">—</b></div>
+      <div class="p"><span>휴일근로</span><b id="s-ot">—</b></div>
+      <div><span>휴가</span><b id="s-vac">—</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="eyebrow">달력</h2></div>
+      <div class="calhead"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
+      <div class="cal" id="cal"></div>
+      <div class="legend">
+        <span><i style="background:var(--cyan)"></i>정규 근무</span>
+        <span><i style="background:var(--pink)"></i>휴일근로</span>
+        <span><i style="background:var(--cyan-soft);box-shadow:inset 0 0 0 1.5px var(--cyan)"></i>휴가</span>
+      </div>
+      <button class="holbtn" id="hol-open">임시 공휴일 관리</button>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="eyebrow">주별 실근무</h2><span class="range" id="week-base">—</span></div>
+      <div class="weeks" id="weeks"></div>
+      <div class="wklabs" id="wklabs"></div>
+      <p class="cp-flag" id="wk-drift" hidden>—</p>
+    </div>
+
+    <div class="card" style="padding:8px 18px">
+      <div class="rowhead" id="rowhead" hidden>
+        <div class="rowhead-t">
+          <span id="rowhead-wk">—</span>
+          <span id="rowhead-sum">—</span>
+        </div>
+        <span class="rowhead-acts">
+          <button type="button" id="wk-edit">목표 조정</button>
+          <button type="button" id="wk-clear">전체 보기</button>
+        </span>
+      </div>
+      <div class="rows" id="rows"></div>
+    </div>
+
+  </section>
+</main>
+
+<div class="sticky" id="sticky">
+  <div class="punchbar">
+    <div class="places" id="places" role="group" aria-label="근무 장소">
+      <button type="button" data-p="office"><i>🏢</i>사무실</button>
+      <button type="button" data-p="field"><i>🚗</i>외근</button>
+      <button type="button" data-p="home"><i>🏠</i>재택</button>
+    </div>
+    <div class="pb-main">
+      <div class="l" id="pb-idle"><b>출근 전</b><span id="pb-sub">—</span></div>
+      <div class="l" id="pb-live" hidden><b id="bar-elapsed">0:00:00</b><span id="bar-since">—</span></div>
+      <button id="btn-in"><span id="pb-label">출근</span><em id="pb-now">—</em></button>
+      <button id="btn-out" hidden>퇴근<em id="bar-now">—</em></button>
+    </div>
+  </div>
+  <nav role="tablist" aria-label="화면 전환">
+    <button id="nav-today" role="tab" aria-controls="tab-today" aria-selected="true">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg>오늘
+    </button>
+    <button id="nav-log" role="tab" aria-controls="tab-log" aria-selected="false">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4"/></svg>기록
+    </button>
+  </nav>
+</div>
+
+<dialog id="sheet">
+  <form method="dialog" class="sheet" id="form">
+    <h3 id="sheet-title">근무 기록</h3>
+    <div class="types">
+      <label><input type="radio" name="t" value="work" checked><span>근무</span></label>
+      <label><input type="radio" name="t" value="vacation"><span>연차</span></label>
+      <label id="t-comp"><input type="radio" name="t" value="comp"><span>보상</span></label>
+    </div>
+    <div class="field"><label for="f-date">날짜</label><input type="date" id="f-date" required></div>
+
+    <div class="pair" id="time-fields">
+      <div class="field"><label for="f-start">출근</label><input type="time" id="f-start" value="09:00"></div>
+      <div class="field"><label for="f-end">퇴근</label><input type="time" id="f-end" value="18:00"></div>
+    </div>
+    <div id="place-fields">
+      <div class="opts c3" data-key="place">
+        <button type="button" data-v="office">🏢 사무실</button>
+        <button type="button" data-v="field">🚗 외근</button>
+        <button type="button" data-v="home">🏠 재택</button>
+      </div>
+      <label class="chk opt" id="dinner-wrap" style="margin-top:11px" hidden>
+        <input type="checkbox" id="f-dinner">저녁 휴게 1시간 <span>18:00 이후 · 안 쉬었으면 그대로 두세요</span>
+      </label>
+    </div>
+
+    <div id="vac-fields" hidden>
+      <div class="chips">
+        <button type="button" data-h="8">—</button>
+        <button type="button" data-h="4">—</button>
+        <button type="button" data-h="2">—</button>
+      </div>
+      <div class="field">
+        <label for="f-hours">휴가 시간 (시간차 가능)</label>
+        <input type="number" id="f-hours" min="0.5" step="0.1" value="8">
+      </div>
+    </div>
+
+    <p class="hint" id="f-hint">—</p>
+    <div class="sheet-foot">
+      <button type="button" class="btn-ghost" id="f-delete" hidden>삭제</button>
+      <button type="button" class="btn-ghost" id="f-cancel">취소</button>
+      <button type="button" class="btn-save" id="f-save">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="cfg">
+  <div class="sheet">
+    <div id="c-intro" hidden>
+      <h3>근무 규정을 알려주세요</h3>
+      <p class="hint" style="margin-top:7px">회사마다 기준이 달라서, 이걸 맞춰야 시간이 정확하게 계산됩니다. 나중에 언제든 바꿀 수 있어요.</p>
+    </div>
+    <h3 id="c-title">근무 규정</h3>
+
+    <div class="setup-q">
+      <h4>회사 유형</h4>
+      <div class="opts" data-key="companyType">
+        <button type="button" data-v="A"><b>A · 선택적 근로시간제</b><em>코어타임 10:00~16:00. 1개월 총량으로 판단합니다.</em></button>
+        <button type="button" data-v="B"><b>B · 46시간제</b><em>주 46시간. 출근 가능 시간이 정해져 있습니다.</em></button>
+      </div>
+      <p class="qnote" id="c-preview">—</p>
+    </div>
+
+    <div class="setup-q">
+      <h4 id="rule-head">적용되는 사내 규정</h4>
+      <p class="qnote" id="rule-a" style="margin-top:0" hidden>
+        · 월 목표 = <b>40시간 × (그 달 일수 ÷ 7)</b> · 공휴일은 하루 8시간씩 차감<br>
+        · 최대 근로 가능 = 52시간 × (일수 ÷ 7) — 넘으면 법 위반<br>
+        · <b>코어타임 10:00 ~ 16:00</b> 반드시 근무 · 10시 1분은 지각<br>
+        · 휴게 4시간 30분 · 8시간 1시간 · <b>12시간 1시간 30분</b><br>
+        · 연장·휴일 근로는 <b>보상휴가 2개월</b> · 미사용 시 수당<br>
+        · 연차는 <b>회계연도(1월 1일)</b> 기준 · 근무 등록 마감 다음 달 5일
+      </p>
+      <p class="qnote" id="rule-b" style="margin-top:0" hidden>
+        · 하루 소정근로 <b>9시간 12분</b> · 반차 4시간 36분<br>
+        · 기간은 <b>그 달 첫 월요일부터</b> 4~5주 · 마감은 종료 +4일<br>
+        · 점심 <b>12:00~13:00</b> 자동 공제 · 저녁 휴게는 기본 사용 안 함<br>
+        · 출근 가능 07:00~10:00 / 12:00~14:30 — 벗어나면 지각<br>
+        · 재택근무는 <b>주말·공휴일만</b>, 일 최대 12시간<br>
+        · 연장근로는 월 단위 합산 후 <b>2시간 단위</b> 정산 · 주 6시간 한도
+      </p>
+      <div class="field" style="margin-top:11px">
+        <label for="c-tenure">근속연수 (연차 자동 계산)</label>
+        <input type="number" id="c-tenure" min="0" max="40" step="1" placeholder="예: 3">
+      </div>
+      <p class="qnote" id="c-tenure-out">—</p>
+    </div>
+
+    <div class="setup-q">
+      <h4>연차</h4>
+      <div class="field">
+        <label for="c-annual">총 연차 일수 (근속연수를 넣으면 자동)</label>
+        <input type="number" id="c-annual" min="0" max="40" step="0.5" placeholder="15">
+      </div>
+      <p class="qnote" id="annual-note">—</p>
+    </div>
+
+    <div class="setup-q" id="acct-row" hidden>
+      <h4>계정</h4>
+      <div class="lv-main">
+        <span class="lv-used" id="acct">—</span>
+        <button type="button" class="btn-ghost" id="c-logout">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="sheet-foot">
+      <button type="button" class="btn-ghost" id="c-cancel">취소</button>
+      <button type="button" class="btn-save" id="c-save">저장</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="wp">
+  <form method="dialog" class="sheet">
+    <h3 id="wp-title">주차 목표</h3>
+    <div class="field">
+      <label for="wp-h">이 주에 채울 시간</label>
+      <input type="number" id="wp-h" min="0" max="80" step="0.5">
+    </div>
+    <p class="hint" id="wp-note">—</p>
+    <div class="sheet-foot">
+      <button type="button" class="btn-ghost" id="wp-reset">기본값</button>
+      <button type="button" class="btn-ghost" id="wp-cancel">취소</button>
+      <button type="button" class="btn-save" id="wp-save">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="hol">
+  <form method="dialog" class="sheet">
+    <h3>임시 공휴일</h3>
+    <div class="addrow">
+      <div class="field"><label for="hol-date">날짜</label><input type="date" id="hol-date"></div>
+      <button type="button" id="hol-add">추가</button>
+    </div>
+    <div class="hollist" id="hol-list"></div>
+    <p class="hint">추가한 날은 <b>월 목표 시간에서 빠지고</b>, 그날 근무하면 휴일근로(초과)로 잡힙니다. 칩을 누르면 삭제돼요. 법정공휴일은 한국천문연구원 특일 정보(공공데이터포털) 기준으로 <b>2026~2027년</b>이 들어 있습니다.</p>
+    <div class="sheet-foot">
+      <button type="button" class="btn-save" id="hol-close">닫기</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ══════════ 배포 설정 ══════════
+   이 두 값이 채워져 있으면 Supabase + 구글 로그인으로 동작하고,
+   비우면 이 기기에만 저장합니다(로그인 없음).
+   publishable 키는 공개되어도 안전합니다 — 남의 데이터는 RLS가 막습니다.
+   (secret / service_role 키는 절대 여기에 넣지 마세요) */
+const SUPABASE = {
+  url: "https://npfqefdcstgffpkejtik.supabase.co",
+  key: "sb_publishable_RBb6fwL-XuiEa6lWNPj5qw_-CzIeNCD",
+};
+
+/* ────────── 규칙 ────────── */
+let   DAY  = 480;                                  // 평일 하루 기준(분) — dayMins에서 파생
+const LEGAL_DAY = 480;                             // 근로기준법 제56조의 8시간. 회사 기준과 별개로 고정
+const LS   = "worklog.v1";
+
+/* 근무 요일 → 요일 번호(일=0). dayMins는 여기서 파생됩니다 */
+const WORKDAYS = {
+  "mon-fri": [1,2,3,4,5],
+  "mon-sat": [1,2,3,4,5,6],
+  "mon-thu": [1,2,3,4],
+};
+
+/* 근무 장소 */
+const PLACES = { office:["🏢","사무실"], field:["🚗","외근"], home:["🏠","재택"] };
+
+/* B유형 = 46시간제. 사내 규정 문서를 그대로 옮긴 값입니다 */
+const B_RULES = {
+  workStart:"09:00", workEnd:"19:12", workDays:"mon-fri",
+  lunch: ["12:00", "13:00"],            // 근무가 이 구간과 겹치면 그만큼 자동 공제
+  dinnerMin: 60,                        // 18:00 이후 선택 휴게 — 기록별로 켭니다
+  clockIn: [["오전 근무","07:00","10:00"], ["오후 근무","12:00","14:30"]],
+  homeRestDayOnly: true,                // 재택은 주말·공휴일만
+  maxHomeMin: 12 * 60,
+  overtimeUnit: 120,                    // 연장근로는 2시간 단위 정산
+  weeklyOtCap: 360,                     // 연장근로 수당은 주 최대 6시간까지 지급
+};
+/* A유형 = 선택적 근로시간제. 사내 취업규칙을 그대로 옮긴 값입니다 */
+const A_RULES = {
+  weeklyLegal: 40 * 60,               // 법정 근로시간 = 40시간 × (정산기간 일수 ÷ 7)
+  weeklyMax:   52 * 60,               // 최대 근로 가능 = 법정 + 12시간 × (일수 ÷ 7)
+  core: ["10:00", "16:00"],           // 코어타임 — 반드시 근무
+  breaks: [{ after:240, deduct:30 }, { after:480, deduct:60 }, { after:720, deduct:90 }],
+  dueDay: 5,                          // 다음 달 5일 근무 등록 마감
+  compMonths: 2,
+};
+// 근속연수 → 연차 일수 (1년 미만 11일, 이후 2년마다 1일 가산, 최대 25일)
+const annualByTenure = y =>
+  y < 1 ? 11 : Math.min(25, 15 + Math.floor((y - 1) / 2));
+
+// 두 시간 구간이 겹치는 분 (근무가 자정을 넘기면 다음날로)
+const overlapMin = (aS, aE, bS, bE) => {
+  const a1 = toMin(aS), b1 = toMin(bS), b2 = toMin(bE);
+  let a2 = toMin(aE); if (a2 < a1) a2 += 1440;   // 같은 시각이면 0분 (24시간 아님)
+  return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
+};
+
+/* 온보딩에서 고르는 프리셋. 기본값은 지금까지의 동작과 정확히 같습니다 */
+const BREAK_PRESET = {
+  legal: [{ after:240, deduct:30 }, { after:480, deduct:60 }],   // 근로기준법 제54조
+  over8: [{ after:480, deduct:60 }],
+  none:  [],
+};
+const PREMIUM_PRESET = {
+  legal: { base:1.5, over:2 },                     // 8시간까지 1.5배, 초과분 2배
+  flat:  { base:1.5, over:1.5 },
+  none:  null,
+};
+// 공공데이터포털 · 한국천문연구원 특일 정보 API에서 받은 2026~2027년 공휴일
+// (조회일 2026-09-15). 해가 바뀌면 같은 API로 다시 받아 이 배열만 교체하면 됩니다.
+const HOLIDAYS = new Set([
+  "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18",
+  "2026-03-01", "2026-03-02", "2026-05-01", "2026-05-05",
+  "2026-05-24", "2026-05-25", "2026-06-03", "2026-06-06",
+  "2026-07-17", "2026-08-15", "2026-08-17", "2026-09-24",
+  "2026-09-25", "2026-09-26", "2026-10-03", "2026-10-05",
+  "2026-10-09", "2026-12-25", "2027-01-01", "2027-02-06",
+  "2027-02-07", "2027-02-08", "2027-02-09", "2027-03-01",
+  "2027-05-01", "2027-05-03", "2027-05-05", "2027-05-13",
+  "2027-06-06", "2027-07-17", "2027-07-19", "2027-08-15",
+  "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16",
+  "2027-10-03", "2027-10-04", "2027-10-09", "2027-10-11",
+  "2027-12-25", "2027-12-27",
+]);
+const DOW = ["일","월","화","수","목","금","토"];
+
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hm  = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const md  = s => `${Number(s.slice(5,7))}/${Number(s.slice(8))}`;
+const parseYmd = s => new Date(s + "T00:00:00");
+const toMin = t => { const [h,m] = t.split(":").map(Number); return h*60 + m; };
+const fmtDur = m => { const neg = m < 0; m = Math.abs(Math.round(m)); return `${neg?"-":""}${Math.floor(m/60)}시간 ${pad(m%60)}분`; };
+const fmtDays = m => `${Math.round(m / DAY * 100) / 100}일`;                     // 240분 → "0.5일"
+const lastDay = ym => { const [y,m] = ym.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// 그날의 소정근로시간(분). 공휴일이거나 소정근로일이 아니면 0
+function minsOf(date) {
+  if (isHoliday(date)) return 0;
+  return store.settings.dayMins[parseYmd(date).getDay()] || 0;
+}
+const isWeekend = date => parseYmd(date).getDay() % 6 === 0;
+const isHoliday = date => HOLIDAYS.has(date) || store.settings.extraHolidays.includes(date);
+const isRest = date => minsOf(date) === 0;
+const weekMin = () => store.settings.dayMins.reduce((a, b) => a + b, 0);
+
+const isComp   = r => r.t === "comp";                                  // 보상휴가
+const isAnnual = r => r.t === "vacation" || r.t === "half";            // 연차 (half는 구버전)
+const isVac    = r => isAnnual(r) || isComp(r);                        // 일하지 않고 인정받는 시간
+const vacMin   = r => r.h ?? (r.t === "half" ? DAY/2 : DAY);           // r.h 없으면 구버전 기록
+const vacName  = r => isComp(r) ? "보상휴가" : (m =>
+  m >= DAY ? "연차" : m === DAY/2 ? "반차" : m === DAY/4 ? "반반차" : `시간차 ${m/60}시간`)(vacMin(r));
+
+// 자정을 넘기면 익일로. 출퇴근이 같은 분이면 24시간이 아니라 0분입니다
+function grossMin(r) { const g = toMin(r.e) - toMin(r.s); return g < 0 ? g + 1440 : g; }
+// 설정한 휴게 구간 중 해당되는 가장 큰 것 하나를 공제 (누적 아님)
+function breakOf(breaks, g) {
+  let d = 0;
+  for (const b of breaks) if (g >= b.after) d = Math.max(d, b.deduct);
+  return d;
+}
+const breakMin = g => breakOf(store.settings.breaks, g);
+// 기록 하나의 휴게 공제. B유형은 시간 길이가 아니라 '점심시간과 겹쳤는지'로 정해집니다
+function breakFor(r) {
+  const s = store.settings;
+  if (s.companyType !== "B") return breakOf(s.breaks, grossMin(r));
+  return overlapMin(r.s, r.e, B_RULES.lunch[0], B_RULES.lunch[1]) + (r.dinner ? B_RULES.dinnerMin : 0);
+}
+const overlapM = (a1, a2, b1, b2) => Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));
+// 실근무 net을 채우려면 몇 시까지 있어야 하는지 (분, 자정 넘으면 1440 초과)
+function endForNet(startHM, net) {
+  if (store.settings.companyType !== "B") return toMin(startHM) + grossFor(net);
+  const a1 = toMin(startHM), L1 = toMin(B_RULES.lunch[0]), L2 = toMin(B_RULES.lunch[1]);
+  let end = a1 + net;
+  for (let i = 0; i < 2; i++) end = a1 + net + overlapM(a1, end, L1, L2);   // 점심을 지나면 그만큼 뒤로
+  return end;
+}
+// 회사가 정한 출퇴근 시각 → 하루 소정근로(분) → 요일별 배열
+function deriveDayMins(start, end, workDays, breaks) {
+  const g = grossMin({ s: start, e: end });
+  const net = g - breakOf(breaks, g);
+  const a = [0, 0, 0, 0, 0, 0, 0];
+  for (const d of WORKDAYS[workDays] || WORKDAYS["mon-fri"]) a[d] = net;
+  return a;
+}
+function netMin(r) { if (isVac(r)) return vacMin(r); return grossMin(r) - breakFor(r); }
+// 휴일근로를 초과로 분리할지는 회사 규정. "regular"면 정규 근무에 그대로 합산됩니다
+const isOvertime = (date, r) => !isVac(r) && isRest(date) && store.settings.restDayPolicy === "overtime";
+function premiumMin(net) {
+  const p = store.settings.premium;
+  if (!p) return net;                              // 가산 없음 → 실근무 그대로
+  return net <= LEGAL_DAY ? net * p.base : LEGAL_DAY * p.base + (net - LEGAL_DAY) * p.over;
+}
+// 실근무 net을 채우려면 자리에 앉아 있어야 하는 시간(휴게 포함) — breakMin의 역함수
+function grossFor(net) {
+  let g = net;
+  for (const b of [...store.settings.breaks].sort((a, z) => a.after - z.after))
+    if (net + b.deduct >= b.after) g = net + b.deduct;
+  return g;
+}
+
+/* ── 정산 기간 ──
+   A유형: 달력 월 그대로.
+   B유형: 그 달 첫 월요일 ~ 다음 달 첫 월요일 전날. 주는 월~일, 마감은 종료 +4일.
+   (사내 월구분표와 같은 규칙: 10월 = 10/05~11/01 4주, 11월 = 11/02~12/06 5주) */
+function firstMonday(y, m) {
+  const d = new Date(y, m - 1, 1);
+  d.setDate(1 + (8 - d.getDay()) % 7);
+  return d;
+}
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+
+function period(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  if (store.settings.companyType !== "B")
+    return { from: `${ym}-01`, to: `${ym}-${pad(lastDay(ym))}`, weeks: null,
+             due: ymd(new Date(y, m, A_RULES.dueDay)) };   // 다음 달 5일 마감
+  const from = firstMonday(y, m);
+  const to = addDays(firstMonday(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1), -1);
+  return {
+    from: ymd(from), to: ymd(to),
+    weeks: Math.round((to - from) / 86400000 + 1) / 7,
+    due: ymd(addDays(to, 4)),
+  };
+}
+// 그 날짜가 속한 정산 기간의 키. B유형은 달력 월과 어긋날 수 있습니다 (11/01 → 10월)
+function periodKey(date) {
+  if (store.settings.companyType !== "B") return date.slice(0, 7);
+  const d = parseYmd(date), y = d.getFullYear(), m = d.getMonth() + 1;
+  return date < ymd(firstMonday(y, m))
+    ? (m === 1 ? `${y - 1}-12` : `${y}-${pad(m - 1)}`)
+    : `${y}-${pad(m)}`;
+}
+function periodDays(ym) {
+  const p = period(ym), out = [];
+  for (let d = parseYmd(p.from), end = parseYmd(p.to); d <= end; d = addDays(d, 1)) out.push(ymd(d));
+  return out;
+}
+// 달력 격자에서 1일 앞에 비는 칸. B유형은 월요일로 시작하므로 항상 0
+const gridOffset = ym => (parseYmd(period(ym).from).getDay() + 6) % 7;
+
+// 기간 내 소정근로시간 합 (공휴일은 0이라 자동으로 빠집니다)
+const spanMin = (ym, upto) =>
+  periodDays(ym).reduce((a, d) => a + (upto && d >= upto ? 0 : minsOf(d)), 0);
+
+/* 기간 목표
+   A(선택적 근로시간제): 법정 근로시간 = 40시간 × (정산기간 총 일수 ÷ 7). 달력 일수 기준
+   B(46시간제): 기간 내 소정근로시간 합 (공휴일 없는 4주면 정확히 184시간) */
+function targetMin(ym) {
+  if (store.settings.companyType !== "A") return spanMin(ym);
+  // 공휴일은 유급휴일이므로 하루치(8시간)씩 목표에서 뺍니다
+  const base = A_RULES.weeklyLegal * periodDays(ym).length / 7;
+  const off = periodDays(ym).filter(d => isHoliday(d) && !isWeekend(d)).length;
+  return Math.max(0, Math.round(base - off * 480));
+}
+// A유형의 최대 근로 가능 시간 = 52시간 × (일수 ÷ 7). 넘으면 법 위반
+const maxMin = ym => store.settings.companyType === "A"
+  ? Math.round(A_RULES.weeklyMax * periodDays(ym).length / 7) : 0;
+
+// 오늘 시점에 채워져 있어야 할 양 — 지나간 근무일 비율만큼
+function paceMin(ym, today) {
+  const all = spanMin(ym);
+  return all ? targetMin(ym) * spanMin(ym, today) / all : 0;
+}
+/* 연장근로 정산 (B유형)
+   사내 문서: "월 별로 전체 근로시간을 종합 → 월 종합 근무시간 − 184H = 연장근로시간(2H 단위로 지급)"
+   주별로 자르지 않고 기간 전체를 합산하므로, 한 주 초과가 다른 주 부족과 상쇄됩니다. */
+function overtimeSettle(ym) {
+  const unit = B_RULES.overtimeUnit, cap = B_RULES.weeklyOtCap;
+  const s = summarize(ym);
+  const worked = s.regular + s.overtime;               // 연차·휴일근로 포함 월 종합
+  const raw = Math.max(0, worked - s.target);
+  const paid = Math.floor(raw / unit) * unit;          // 2시간 단위 내림
+  const rows = weeksOf(ym).map((w, i) => ({            // 주별은 참고용 내역
+    week: i + 1, worked: w.reg + w.ot, target: w.target,
+    diff: (w.reg + w.ot) - w.target,
+  }));
+  return {
+    rows, worked, target: s.target, raw, paid, remainder: raw - paid,
+    capWeeks: rows.filter(r => r.diff > cap),          // 주 6시간 신청 한도를 넘긴 주
+  };
+}
+
+function summarize(ym) {
+  const s = { regular:0, overtime:0, premium:0, vacation:0, target:targetMin(ym) };
+  const p = period(ym);
+  for (const [date, r] of Object.entries(store.records)) {
+    if (date < p.from || date > p.to) continue;
+    const n = netMin(r);
+    if (isOvertime(date, r)) { s.overtime += n; s.premium += premiumMin(n); }
+    else                     { s.regular  += n; }
+    if (isVac(r)) s.vacation += vacMin(r);
+  }
+  return s;
+}
+
+/* ── 연차 산정 기간: 기준 시작 월부터 1년 ── */
+function leavePeriod(today) {
+  const sm = store.settings.startMonth || 1;
+  const d = parseYmd(today), y = d.getFullYear();
+  const startY = (d.getMonth() + 1) >= sm ? y : y - 1;
+  return { from: ymd(new Date(startY, sm - 1, 1)), to: ymd(new Date(startY + 1, sm - 1, 0)) };
+}
+function usedLeave(today) {
+  const { from, to } = leavePeriod(today);
+  let m = 0;
+  for (const [date, r] of Object.entries(store.records))
+    if (isAnnual(r) && date >= from && date <= to) m += vacMin(r);   // YYYY-MM-DD는 사전순 = 시간순
+  return m;
+}
+
+/* ── 보상휴가: 휴일근로 가산분을 적립하고 적립월 + N개월 말일에 소멸 ── */
+const expiryOf = ym => {
+  const [y, m] = ym.split("-").map(Number), n = store.settings.comp.expireMonths;
+  return n == null ? "9999-12-31" : ymd(new Date(y, m + n, 0));   // null = 무기한
+};
+
+function compLedger(today) {
+  const earned = {};                                        // 적립: 월별 휴일근로 가산 환산
+  for (const [date, r] of Object.entries(store.records))
+    if (isOvertime(date, r)) {
+      const ym = periodKey(date);                      // 달력 월이 아니라 정산 기간 기준
+      earned[ym] = (earned[ym] || 0) + premiumMin(netMin(r));
+    }
+  const buckets = Object.keys(earned).sort()
+    .map(ym => ({ ym, earned: earned[ym], used: 0, expires: expiryOf(ym) }));
+
+  // 사용: 보상휴가 기록을 날짜순으로, 그 시점에 살아 있는 버킷 중 먼저 만료되는 것부터 차감
+  let unmatched = 0;
+  const uses = Object.entries(store.records).filter(([, r]) => isComp(r)).sort(([a], [b]) => a < b ? -1 : 1);
+  for (const [date, r] of uses) {
+    let need = vacMin(r);
+    for (const b of buckets) {
+      if (need <= 0) break;
+      if (b.ym > date.slice(0, 7) || date > b.expires) continue;   // 아직 적립 전이거나 이미 만료
+      const take = Math.min(need, b.earned - b.used);
+      b.used += take; need -= take;
+    }
+    unmatched += need;                                      // 적립분 없이 쓴 보상휴가
+  }
+
+  let live = 0, expired = 0;
+  for (const b of buckets) {
+    const rest = b.earned - b.used;
+    if (today > b.expires) expired += rest; else live += rest;
+  }
+  return { buckets, live, expired, unmatched };
+}
+
+// 그 달의 1일이 월요일 기준 몇 칸 밀려 있는지 (달력·주차 계산 공용)
+// 주차별 집계. B유형은 기간이 월요일에 시작해 한 줄이 곧 한 주차입니다
+// 주 단위 조정(1주 52h / 2주 40h …)을 하면 그 주 목표만 바뀌고 월 목표는 그대로입니다
+function weeksOf(ym) {
+  const days = periodDays(ym), off = gridOffset(ym);
+  const plan = store.settings.weekPlan[ym] || [];
+  const weeks = Array.from({ length: Math.ceil((days.length + off) / 7) },
+                          () => ({ reg:0, ot:0, base:0, target:0, planned:false }));
+  days.forEach((date, i) => {
+    const w = weeks[Math.floor((i + off) / 7)];
+    w.base += minsOf(date);
+    const r = store.records[date];
+    if (!r) return;
+    if (isOvertime(date, r)) w.ot += netMin(r); else w.reg += netMin(r);
+  });
+  weeks.forEach((w, i) => {
+    w.planned = plan[i] != null;
+    w.target = w.planned ? plan[i] : w.base;
+  });
+  return weeks;
+}
+// 조정한 주 목표의 합이 월 목표와 어긋나는 양 (0이어야 정상)
+function planDrift(ym) {
+  const weeks = weeksOf(ym);
+  if (!weeks.some(w => w.planned)) return 0;
+  return weeks.reduce((a, w) => a + w.target, 0) - targetMin(ym);
+}
+
+let wkFilter = null;          // 주별 막대로 고른 주차 (null이면 전체)
+
+/* ────────── 저장 ────────── */
+const normalize = o => {
+  const s = o?.settings || {};
+  const out = {
+    records: o?.records || {},
+    punchedInAt: o?.punchedInAt || null,
+    settings: {
+      // 기본값 = 지금까지의 동작. 기존 기록이 있으면 설정을 마친 것으로 봅니다
+      setup: s.setup ?? Object.keys(o?.records || {}).length > 0,
+      companyType: s.companyType === "B" ? "B" : "A",
+      tenure: s.tenure ?? null,                        // 근속연수 (B유형 연차 자동 계산)
+      workStart: s.workStart || "09:00",
+      workEnd: s.workEnd || "18:00",
+      workDays: WORKDAYS[s.workDays] ? s.workDays : "mon-fri",
+      breakPreset: s.breakPreset || "over8",
+      breaks: Array.isArray(s.breaks) ? s.breaks : BREAK_PRESET[s.breakPreset || "over8"],
+      restDayPolicy: s.restDayPolicy === "regular" ? "regular" : "overtime",
+      premiumPreset: s.premiumPreset || "legal",
+      premium: s.premium !== undefined ? s.premium : PREMIUM_PRESET[s.premiumPreset || "legal"],
+      comp: {
+        enabled: s.comp?.enabled ?? true,
+        expireMonths: s.comp?.expireMonths === undefined ? 2 : s.comp.expireMonths,
+      },
+      annual: s.annual ?? null,
+      startMonth: Number(s.startMonth) || 1,
+      extraHolidays: Array.isArray(s.extraHolidays) ? s.extraHolidays : [],
+      weekPlan: (s.weekPlan && typeof s.weekPlan === "object") ? s.weekPlan : {},
+    },
+  };
+  const g = out.settings;
+  if (g.companyType === "A") {
+    // 선택적 근로시간제 — 소정 출퇴근 시각이 없고, 월 총량으로 판단합니다
+    Object.assign(g, {
+      breakPreset: "flex", breaks: A_RULES.breaks,
+      restDayPolicy: "overtime", premiumPreset: "legal", premium: PREMIUM_PRESET.legal,
+      comp: { enabled: true, expireMonths: A_RULES.compMonths },
+      startMonth: 1,                                   // 연차는 회계연도(1월) 기준
+      annual: g.tenure == null ? g.annual : annualByTenure(g.tenure),
+    });
+    g.dayMins = [0, 480, 480, 480, 480, 480, 0];       // 목표 배분 기준 (평일 균등)
+  } else if (g.companyType === "B") {
+    // 사내 규정이 정한 값 — 사용자가 못 바꿉니다. 연차만 근속연수에서 나옵니다
+    Object.assign(g, {
+      workStart: B_RULES.workStart, workEnd: B_RULES.workEnd, workDays: B_RULES.workDays,
+      restDayPolicy: "overtime", premiumPreset: "legal", premium: PREMIUM_PRESET.legal,
+      annual: g.tenure == null ? g.annual : annualByTenure(g.tenure),
+      // 초과분은 연장근로 수당으로 지급되므로 보상휴가와 이중 계상하지 않습니다
+      comp: { enabled: s.comp?.enabled === true, expireMonths: g.comp.expireMonths },
+    });
+    const lunchCut = overlapMin(g.workStart, g.workEnd, B_RULES.lunch[0], B_RULES.lunch[1]);
+    const day = grossMin({ s: g.workStart, e: g.workEnd }) - lunchCut;      // 9시간 12분
+    g.dayMins = [0, day, day, day, day, day, 0];
+  } else {
+    // 출퇴근 시각이 진짜 기준. 시각이 없던 구버전 기록만 저장된 dayMins를 그대로 씁니다
+    g.dayMins = (!s.workStart && Array.isArray(s.dayMins) && s.dayMins.length === 7)
+      ? s.dayMins.map(Number)
+      : deriveDayMins(g.workStart, g.workEnd, g.workDays, g.breaks);
+  }
+  return out;
+};
+let store = normalize(null);
+let remote = null;          // 원격 저장소. push(body) 하나만 있으면 무엇이든 됩니다
+
+// store를 갈아끼울 때마다 DAY를 설정에 맞춥니다. 이 한 곳으로 모아 두면 어긋날 일이 없습니다
+function setStore(o) { store = normalize(o); DAY = Math.max(...store.settings.dayMins); wkFilter = null; }
+const mirror = () => { try { localStorage.setItem(LS, JSON.stringify(store)); } catch {} };
+
+try { const raw = localStorage.getItem(LS); if (raw) setStore(JSON.parse(raw)); } catch {}
+
+function save() {
+  setStore(store);            // 정규화 + dayMins·DAY 재계산
+  mirror();                   // 서버가 죽어도 남는 사본
+  remote?.push(store);
+  render();
+}
+
+/* ── 저장소 1: Supabase (호스팅 배포 + 구글 로그인) ── */
+let sb = null, uid = null, pushTimer = null;
+
+async function initSupabase() {
+  if (!SUPABASE.url || !SUPABASE.key) return false;
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm");
+  sb = createClient(SUPABASE.url, SUPABASE.key);
+
+  const apply = async session => {
+    uid = session?.user?.id || null;
+    $("gate").hidden = !!uid;
+    $("app").hidden  = !uid;
+    $("sticky").hidden = !uid;
+    if (!uid) { remote = null; return; }
+    $("acct").textContent = session.user.email || "";
+
+    const { data, error } = await sb.from("worklog").select("data").eq("user_id", uid).maybeSingle();
+    if (error) { toast("불러오기 실패: " + error.message); return; }
+    if (data?.data) setStore(data.data);
+    else if (Object.keys(store.records).length) { /* 이 기기에 있던 기록을 첫 로그인 때 올림 */ }
+    else setStore(null);
+    mirror();
+
+    // 저장은 한 번에 몰아서 — 클릭마다 요청이 튀지 않게
+    remote = { push: body => {
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(async () => {
+        const { error } = await sb.from("worklog")
+          .upsert({ user_id: uid, data: body, updated_at: new Date().toISOString() });
+        if (error) toast("저장 실패: " + error.message);
+      }, 600);
+    }};
+    if (!data?.data && Object.keys(store.records).length) remote.push(store);
+    render();
+    if (!store.settings.setup) openSetup(true);
+  };
+
+  const { data: { session } } = await sb.auth.getSession();
+  await apply(session);
+  sb.auth.onAuthStateChange((_e, s) => apply(s));
+
+  $("g-login").onclick = () => sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: location.origin + location.pathname },
+  });
+  $("c-logout").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  $("acct-row").hidden = false;
+  return true;
+}
+
+/* ── 저장소 2: Artifact DB (claude.ai에서 열었을 때) ── */
+async function initArtifactDb() {
+  const db = await window.claude?.use?.("db");
+  if (!db) return false;
+  const ref = db.doc("work/log");
+  ref.onSnapshot(snap => {
+    if (!snap.exists) {
+      if (Object.keys(store.records).length || store.punchedInAt) save();   // 로컬 기록을 올림
+      return;
+    }
+    setStore(snap.data());
+    mirror();
+    render();
+  }, () => { remote = null; toast("동기화가 끊겼습니다. 이 기기에만 저장됩니다."); });
+  remote = { push: b => ref.set(b).catch(e => toast("저장 실패: " + e.message)) };
+  return true;
+}
+
+/* 저장소 3은 localStorage — 위 둘이 없으면 그대로 이 기기에만 저장됩니다.
+   claude.ai Artifact 안에서는 외부 요청이 CSP로 막히므로 Artifact DB를 먼저 씁니다. */
+const IN_ARTIFACT = !!window.claude?.use;
+// 파일을 그냥 더블클릭해서 연 경우. 구글 로그인은 file:// 로 돌아올 수 없으니
+// 로그인 화면을 띄우지 않고 이 기기에만 저장하는 모드로 엽니다 (올리기 전 확인용)
+const LOCAL_FILE = location.protocol === "file:";
+(async () => {
+  if (IN_ARTIFACT) { if (await initArtifactDb()) return; }
+  if (!LOCAL_FILE) {
+    try { if (await initSupabase()) return; } catch (e) { toast("로그인 준비 실패: " + e.message); }
+  }
+  if (!IN_ARTIFACT) await initArtifactDb();
+})();
+
+const $ = id => document.getElementById(id);
+
+/* ────────── 화면 ────────── */
+let view = ymd(new Date()).slice(0, 7);   // 기록 탭이 보고 있는 달
+
+/* 규정 위반 안내
+   A: 코어타임 10:00~16:00을 반드시 포함해야 합니다
+   B: 출근 가능 시간(오전 07:00~10:00 / 오후 12:00~14:30) 밖이면 지각 */
+function lateNote(startHM, endHM) {
+  const t = store.settings.companyType;
+  if (t === "A") {
+    const [c1, c2] = A_RULES.core;
+    if (toMin(startHM) > toMin(c1)) return `코어타임 지각 (${c1}까지 출근)`;
+    if (endHM && toMin(endHM) < toMin(c2)) return `코어타임 조퇴 (${c2} 이후 퇴근)`;
+    return "";
+  }
+  if (t !== "B") return "";
+  const m = toMin(startHM);
+  if (B_RULES.clockIn.some(([, a, b]) => m >= toMin(a) && m <= toMin(b))) return "";
+  return `지각 (출근 가능 ${B_RULES.clockIn.map(([n, a, b]) => `${n} ${a}~${b}`).join(" / ")})`;
+}
+
+function toast(msg, undo) {
+  document.querySelector(".toast")?.remove();
+  const el = Object.assign(document.createElement("div"), { className:"toast", textContent:msg });
+  el.role = "status";                         // 없으면 스크린리더가 저장 여부를 전혀 못 알려줍니다
+  el.ariaLive = "polite";
+  if (undo) {                                 // 급여로 가는 숫자입니다. 한 번은 무를 수 있어야 합니다
+    const b = Object.assign(document.createElement("button"), { className:"toast-undo", textContent:"되돌리기" });
+    b.onclick = () => { el.remove(); undoLast(); };
+    el.append(b);
+  }
+  document.body.append(el);
+  setTimeout(() => el.remove(), undo ? 6000 : 3200);
+}
+
+function render() {
+  const now = new Date(), today = ymd(now);
+  $("today-date").textContent = `${now.getMonth()+1}월 ${now.getDate()}일`;
+  $("today-dow").textContent  = `${DOW[now.getDay()]}요일`;
+  $("today-dow").className    = "dow" + (isRest(today) ? " wknd" : "");
+
+  // ── 히어로: B유형은 주간이 기준, A유형은 월간
+  const ym = periodKey(today), s = summarize(ym), p = period(ym), isB = store.settings.companyType === "B";
+  const wk = isB ? thisWeek(ym, today) : null;
+
+  // 페이스와 같은 기간(오늘까지)을 씁니다. 안 그러면 같은 카드가
+  // "목표를 넘겼어요"와 "앞서 있어요"를 동시에 말합니다
+  const filled = filledTo(wk ? weekDays(ym, wk.wi) : periodDays(ym), today);
+  const target = wk ? wk.target : s.target;
+  const pace   = wk ? wk.pace   : paceMin(ym, today);
+  // 페이스 비교에는 오늘까지의 기록만 씁니다.
+  // 미리 등록한 미래 연차가 "앞서 있다"로 잡히던 문제 (46시간 주에 28시간 앞섬 등)
+  const done = filled;
+  $("m-eyebrow").textContent = wk ? "이번 주" : "채운 시간";
+  $("m-range").textContent = wk
+    ? `${wk.wi + 1}주차 · ${md(wk.from)} ~ ${md(wk.to)}`
+    : (p.weeks ? `${md(p.from)} – ${md(p.to)} · ${p.weeks}주`
+               : `${md(p.from)} (${DOW[parseYmd(p.from).getDay()]}) – ${md(p.to)} (${DOW[parseYmd(p.to).getDay()]})`);
+  $("m-filled").textContent = fmtDur(filled);
+  $("m-goal").textContent   = `/ ${fmtDur(target)}`;
+  $("m-bar").style.width    = Math.min(100, target ? filled / target * 100 : 0) + "%";
+  $("m-left").textContent   = filled >= target
+    ? `목표를 ${fmtDur(filled - target)} 넘겼어요.`
+    : `${fmtDur(target - filled)} 남았어요.`;
+
+  // 기록이 0건이면 뒤처졌다고 말할 근거가 없습니다. 설정 직후 첫 화면이 이 경우입니다
+  const started = periodDays(ym).some(d => store.records[d]);
+  const diff = done - pace;
+  $("m-pace").hidden = !pace;
+  $("m-pace").style.left = Math.min(100, target ? pace / target * 100 : 0) + "%";
+  $("m-pace-txt").textContent = (!pace || !started) ? (wk ? "이번 주가 막 시작됐어요." : "이번 달이 막 시작됐어요.")
+    : Math.abs(diff) < 30 ? "페이스대로 가고 있어요."
+    : diff > 0 ? `페이스보다 ${fmtDur(diff)} 앞서 있어요.`
+    : `페이스보다 ${fmtDur(-diff)} 뒤처졌어요.`;
+  $("m-pace-txt").className = "hero-pace " + (!pace || !started || Math.abs(diff) < 30 ? "on" : diff > 0 ? "ahead" : "behind");
+
+  $("ot-block").hidden = !s.overtime;
+  $("ot-raw").textContent  = fmtDur(s.overtime);
+  $("ot-prem").textContent = fmtDur(s.premium);
+
+  // ── 출퇴근 바 + 오늘 카드
+  const live = !!store.punchedInAt, rec = store.records[today];
+  $("pb-idle").hidden = live;  $("pb-live").hidden = !live;
+  $("btn-in").hidden  = live;  $("btn-out").hidden = !live;
+  const vacToday = rec && isVac(rec);
+  $("pb-sub").textContent = vacToday ? `오늘은 ${kindOf(rec)}예요`
+    : isRest(today) ? "오늘은 휴일근로로 기록돼요"
+    : `${now.getMonth()+1}월 ${now.getDate()}일 ${DOW[now.getDay()]}요일`;
+  // 연차인 날에 출근을 권하지 않습니다. 눌러도 되지만 무슨 일이 생기는지는 말합니다
+  $("pb-label").textContent = "출근";
+  $("btn-in").classList.toggle("warn", !!vacToday);
+
+  // 근무 장소 — 오늘 탭에서, 출근 전에만. render()가 tab()의 처리를 덮지 않도록 둘 다 봅니다
+  $("places").hidden = live || $("tab-today").hidden;
+  for (const b of $("places").children) b.ariaPressed = String(b.dataset.p === place);
+
+  renderToday(ym, today, live, rec);
+  renderScopeTile(ym, today, s, wk);
+  renderLeaveTile(today);
+  renderOvertime(ym);
+  renderComp(today);
+  tick();
+
+  // ── 기록 탭
+  const v = summarize(view), [vy, vm] = view.split("-").map(Number), vp = period(view);
+  $("m-title").textContent = `${vy}년 ${vm}월`;
+  $("m-period").textContent = vp.weeks
+    ? `${md(vp.from)} ~ ${md(vp.to)} · ${vp.weeks}주 · 마감 ${md(vp.due)}`
+    : "";
+  $("m-period").hidden = !vp.weeks;
+  // 단위를 작게 그려야 3칸이 좁은 화면에서도 한 줄에 들어갑니다
+  const unit = m => fmtDur(m).replace("시간", "<u>시간</u>").replace("분", "<u>분</u>");
+  $("s-reg").innerHTML = unit(v.regular);
+  $("s-ot").innerHTML  = v.overtime
+    ? `${unit(v.overtime)}<br><span style="font-size:11px;color:var(--ink-3);font-weight:500">가산 ${fmtDur(v.premium)}</span>`
+    : unit(0);
+  $("s-vac").innerHTML = unit(v.vacation);
+  renderCalendar(view);
+  renderWeeks(view);
+  renderRows(view);
+}
+
+// 오늘 몇 시에 나가면 되는지
+
+// 지금까지 찍힌 실근무 (근무 중이면 실시간)
+function liveNet() {
+  if (!store.punchedInAt) return 0;
+  const start = new Date(store.punchedInAt);
+  return Math.max(0, netMin({ s: hm(start), e: hm(new Date()), t: "work" }));
+}
+// 오늘이 그 기간의 몇 주차인지 (달력 격자와 같은 기준)
+function weekIndexOf(ym, date) {
+  const i = periodDays(ym).indexOf(date);
+  return i < 0 ? -1 : Math.floor((i + gridOffset(ym)) / 7);
+}
+const weekDays = (ym, wi) =>
+  periodDays(ym).filter((_, i) => Math.floor((i + gridOffset(ym)) / 7) === wi);
+
+/* 오늘 채워야 할 몫 — 그 주 목표 기준.
+   주 단위 조정으로 1주차를 52시간으로 잡았으면 그 주의 하루 몫이 함께 늘어납니다. */
+function todayQuota(ym, today) {
+  if (isRest(today)) return 0;
+  const wi = weekIndexOf(ym, today);
+  if (wi < 0) return 0;
+  const w = weeksOf(ym)[wi];
+  const rec = store.records[today];
+  // 오늘 기록분은 빼고 "이번 주에 아직 남은 목표"를 구합니다
+  const need = w.target - (w.reg + w.ot) + (rec ? netMin(rec) : 0);
+  if (need <= 0) return 0;
+  let open = 0;                                   // 오늘 포함, 아직 기록 없는 근무일의 소정시간
+  for (const d of weekDays(ym, wi)) {
+    if (d < today) continue;
+    const m = minsOf(d);
+    if (m && (d === today || !store.records[d])) open += m;
+  }
+  return open ? need * (minsOf(today) / open) : need;
+}
+
+// 오늘이 속한 주의 집계 + 그 주에서 지나간 소정시간(페이스)
+const filledTo = (days, today) =>
+  days.reduce((m, d) => d <= today && store.records[d] ? m + netMin(store.records[d]) : m, 0);
+
+function thisWeek(ym, today) {
+  const wi = weekIndexOf(ym, today);
+  if (wi < 0) return null;
+  const days = weekDays(ym, wi), w = weeksOf(ym)[wi];
+  let pace = 0;
+  for (const d of days) if (d < today) pace += minsOf(d);
+  return { wi, w, pace, from: days[0], to: days[days.length - 1],
+           filled: w.reg + w.ot, target: w.target };
+}
+
+/* 오늘 카드 — 상태·몫·퇴근 시각을 하나로. 별도 타일과 나뉘어 있던 걸 합쳤습니다 */
+/* 오늘 카드 — 목표를 채우는 퇴근 시각 하나만 크게 보여줍니다 */
+// 자정을 넘기면 "내일"을 붙입니다. 안 그러면 08:01이 아침 출근 시각처럼 읽힙니다
+const clockOf = m => (m >= 1440 ? "내일 " : "") + `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
+
+function renderToday(ym, today, live, rec) {
+  const quota = todayQuota(ym, today);
+  const set = (lab, val, tone, sub, ratio) => {
+    $("today-label").textContent = lab;
+    $("today-net").textContent = val;
+    $("today-net").className = "num" + (tone ? " " + tone : "");
+    $("today-sub").textContent = sub || "";
+    $("today-bar").style.width = Math.min(100, clamp(ratio, 0, 1) * 100) + "%";
+  };
+
+  if (live) {
+    const start = new Date(store.punchedInAt);
+    const done = liveNet(), left = quota - done;
+    $("bar-since").textContent = `${hm(start)} 출근`;
+    if (!quota || left <= 0) return set("근무 중", "지금 퇴근 가능", "done", "", 1);
+    const endM = endForNet(hm(start), quota);
+    return set("퇴근 예정", clockOf(endM), "goal", `${fmtDur(left)} 남음`, done / quota);
+  }
+  if (rec) return set("오늘", fmtDur(netMin(rec)), "",
+    isVac(rec) ? vacName(rec) : `${rec.s} – ${rec.e}`,
+    quota ? netMin(rec) / quota : 1);
+  if (isRest(today)) return set("오늘", "휴일", "", "", 0);
+  if (!quota)        return set("오늘", "충족", "done", "", 1);
+  // 출근 전 — 지금 출발했다고 보고 퇴근 시각을 미리 보여줍니다
+  set("퇴근 예정", clockOf(endForNet(hm(new Date()), quota)), "goal", "지금 출근 기준", 0);
+}
+
+/* 히어로가 주간이면 타일은 월간, 히어로가 월간이면 타일은 주간 */
+function renderScopeTile(ym, today, s, wk) {
+  if (wk) {
+    const o = overtimeSettle(ym);
+    $("scope-lab").textContent = "이번 달";
+    $("scope-val").textContent = fmtDur(s.regular + s.overtime);
+    $("scope-sub").textContent = `목표 ${fmtDur(s.target)}` + (o.paid ? ` · 연장 ${fmtDur(o.paid)}` : "");
+  } else {
+    const t = thisWeek(ym, today);
+    $("scope-lab").textContent = "이번 주";
+    $("scope-val").textContent = t ? fmtDur(t.filled) : "—";
+    $("scope-sub").textContent = t ? `목표 ${fmtDur(t.target)}` : "";
+  }
+}
+
+function renderLeaveTile(today) {
+  const { annual } = store.settings;
+  const set = (v, sub) => { $("t-leave").textContent = v; $("t-leave-sub").textContent = sub || ""; };
+  if (!annual) return set("—", "눌러서 설정");
+  const total = annual * DAY, left = total - usedLeave(today);
+  set(fmtDays(Math.max(0, left)), left < 0 ? `${fmtDays(-left)} 초과 사용` : `${fmtDays(total)} 중`);
+  $("t-leave").style.color = left < 0 ? "var(--pink)" : "";
+}
+
+
+function renderOvertime(ym) {
+  const on = store.settings.companyType === "B";
+  $("ot-card").hidden = !on;
+  if (!on) return;
+  const o = overtimeSettle(ym), p = period(ym);
+  $("ot-due").textContent  = `마감 ${md(p.due)}`;
+  $("ot-paid").textContent = fmtDur(o.paid);
+  $("ot-basis").textContent =
+    `월 종합 ${fmtDur(o.worked)} − 기간 목표 ${fmtDur(o.target)} = ` +
+    (o.raw > 0 ? `${fmtDur(o.raw)}` : "정산 없음");
+  $("ot-over").innerHTML = `정산 대상 ${fmtDur(o.raw)}` +
+    (o.remainder ? `<br>${fmtDur(o.remainder)} 미달로 절사` : "");
+  $("ot-cap").hidden = !o.capWeeks.length;
+  $("ot-cap").textContent = `${o.capWeeks.map(r => r.week + "주차").join("·")}에 주 6시간 한도를 넘었어요`;
+}
+
+function renderComp(today) {
+  const on = store.settings.comp.enabled;
+  $("t-comp").hidden = !on;                          // 안 쓰면 입력 시트에서도 숨김
+  document.querySelector(".types").style.gridTemplateColumns = on ? "" : "1fr 1fr";
+  const c = compLedger(today);
+  $("comp-card").hidden = !on || (!c.buckets.length && !c.unmatched);
+  if ($("comp-card").hidden) return;
+
+  $("cp-left").textContent = fmtDur(c.live);
+  const soon = c.buckets.filter(b => today <= b.expires && b.earned - b.used > 0).slice(0, 2);
+  $("cp-soon").textContent = soon.length
+    ? soon.map(b => `${md(b.expires)}까지 ${fmtDur(b.earned - b.used)}`).join("  ·  ")
+    : "지금 쓸 수 있는 잔액이 없어요.";
+  $("cp-exp").hidden  = !c.expired;
+  $("cp-exp").textContent  = `기한이 지나 소멸 ${fmtDur(c.expired)}`;
+  $("cp-over").hidden = !c.unmatched;
+  $("cp-over").textContent = `적립분보다 ${fmtDur(c.unmatched)} 더 사용했어요`;
+}
+
+function renderCalendar(ym) {
+  const cal = $("cal"), off = gridOffset(ym), today = ymd(new Date());
+  cal.innerHTML = "";
+  for (let i = 0; i < off; i++) cal.append(Object.assign(document.createElement("span"), { className:"cell blank" }));
+  for (const date of periodDays(ym)) {
+    const i = parseYmd(date).getDate(), r = store.records[date];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "cell" + (isRest(date) ? " rest" : "");
+    b.textContent = i;
+    b.title = date + (store.settings.extraHolidays.includes(date) ? " · 임시 공휴일" : "");
+    if (r) {
+      const n = netMin(r);
+      // 그날 소정근로를 기준선으로 — 고정 600분이면 실제 근무일(480~690분)이 전부 천장에 붙습니다
+      const q = minsOf(date) || DAY;
+      b.style.setProperty("--a", .3 + clamp((n - q * .5) / (q * .9), 0, 1) * .7);
+      b.classList.add(isVac(r) ? "vac" : isOvertime(date, r) ? "ot" : "reg");
+      b.title = `${date} · ${isVac(r) ? vacName(r) : `${r.s}–${r.e}`} · ${fmtDur(n)}`;
+    }
+    if (date === today) b.classList.add("now");
+    // title은 터치에서 안 뜹니다. 낭독용 이름을 따로 답니다
+    b.setAttribute("aria-label",
+      `${md(date).replace("/", "월 ")}일 ${DOW[parseYmd(date).getDay()]}요일` +
+      (r ? ` · ${isVac(r) ? vacName(r) : `${r.s}부터 ${r.e}`} · ${fmtDur(netMin(r))}` : " · 기록 없음") +
+      (date === today ? " · 오늘" : ""));
+    b.onclick = () => openSheet(date);
+    cal.append(b);
+  }
+}
+
+function renderWeeks(ym) {
+  const weeks = weeksOf(ym), base = weekMin();          // 공휴일 없는 주의 소정시간
+  // 목표(트랙)와 실근무 중 큰 쪽에 눈금을 맞춥니다 — 52시간으로 조정한 주도 잘리지 않게
+  const max = Math.max(base, ...weeks.map(w => Math.max(w.target, w.reg + w.ot))) * 1.08;
+  $("week-base").textContent = `주 ${Math.round(base / 60)}시간`;
+  $("weeks").innerHTML = weeks.map((w, i) => {
+    const total = w.reg + w.ot;
+    const name = `${i+1}주차 · 목표 ${fmtDur(w.target)}${w.planned ? " (직접 조정함)" : ""} · 실근무 ${fmtDur(total)}`;
+    return `<button type="button" class="wk" data-w="${i}" title="${name}" aria-label="${name}"
+        aria-pressed="${wkFilter === i}">
+      <i class="track${w.planned ? " planned" : ""}" style="height:${w.target / max * 100}%"></i>
+      <div class="stack" style="height:${total / max * 100}%;min-height:${total ? 4 : 0}px">
+        <div class="seg reg" style="flex:${w.reg} 0 0"></div>
+        <div class="seg ot"  style="flex:${w.ot} 0 0"></div>
+      </div></button>`;
+  }).join("");
+  $("wklabs").innerHTML = weeks.map((w, i) =>
+    `<span class="${w.planned ? "planned" : ""}">${i+1}주${w.planned ? " ✎" : ""}</span>`).join("");
+  if (wkFilter != null && wkFilter >= weeks.length) wkFilter = null;   // 달을 옮기면 주차 수가 다릅니다
+
+  const drift = planDrift(ym);
+  $("wk-drift").hidden = !drift;
+  $("wk-drift").textContent = drift
+    ? `조정한 주 목표 합이 월 목표보다 ${fmtDur(Math.abs(drift))} ${drift > 0 ? "많습니다" : "적습니다"}`
+    : "";
+}
+
+function renderRows(ym) {
+  const p = period(ym);
+  // 주별 막대를 누르면 그 주만. 막대가 분류 탭 역할을 합니다
+  const scope = wkFilter == null ? null : weekDays(ym, wkFilter);
+  const dates = (scope || Object.keys(store.records))
+    .filter(d => store.records[d] && d >= p.from && d <= p.to).sort().reverse();
+
+  $("rowhead").hidden = wkFilter == null;
+  if (wkFilter != null) {
+    const w = weeksOf(ym)[wkFilter], days = weekDays(ym, wkFilter);
+    $("rowhead-wk").innerHTML  = `${wkFilter + 1}주차<i>${md(days[0])} ~ ${md(days[days.length - 1])}</i>`;
+    $("rowhead-sum").innerHTML = `<i>실근무</i>${fmtDur(w.reg + w.ot)}<i class="g">목표</i>${fmtDur(w.target)}`;
+  }
+
+  const rows = $("rows");
+  rows.innerHTML = "";
+  if (!dates.length) {
+    rows.innerHTML = wkFilter != null
+      ? `<p class="empty">${wkFilter + 1}주차에는 기록이 없어요.</p>`
+      : `<p class="empty">${Number(ym.slice(5))}월 기록이 아직 없어요.<br>달력의 날짜를 눌러 바로 입력할 수 있어요.</p>`;
+    return;
+  }
+  for (const date of dates) rows.append(rowEl(date));
+}
+
+function rowEl(date) {
+  const r = store.records[date], d = parseYmd(date), n = netMin(r), ot = isOvertime(date, r);
+  const btn = document.createElement("button");
+  btn.className = "row" + (isRest(date) ? " wknd" : "");
+  btn.type = "button";
+  const cut = isVac(r) ? 0 : breakFor(r);
+  const detail = isVac(r)
+    ? vacName(r)
+    : `${r.p && r.p !== "office" ? PLACES[r.p][0] + " " : ""}${r.s} – ${r.e}` +
+      (cut ? `<em>휴게 ${fmtDur(cut)} 공제</em>` : "");
+  btn.innerHTML =
+    `<span class="date"><b>${d.getDate()}</b><span>${DOW[d.getDay()]}</span></span>` +
+    `<span class="span">${detail}</span>` +
+    `<span class="net">${fmtDur(n)}` +
+      (ot ? `<span class="tag ot">초과</span><i>가산 ${fmtDur(premiumMin(n))}</i>`
+          : isVac(r) ? `<span class="tag vc">${isComp(r) ? "보상" : "연차"}</span>` : "") +
+    `</span>`;
+  btn.onclick = () => openSheet(date);
+  return btn;
+}
+
+// 하단 고정 바 높이만큼만 본문 아래를 비웁니다 (기기·브라우저마다 다름)
+function stick() {
+  const h = $("sticky").offsetHeight;
+  if (h > 0) document.documentElement.style.setProperty("--stick", h + "px");
+}
+if (window.ResizeObserver) new ResizeObserver(stick).observe($("sticky"));
+else window.onresize = stick;
+stick();
+
+function tick() {
+  if (!store.punchedInAt) { $("pb-now").textContent = hm(new Date()); return; }
+  const ms = Date.now() - new Date(store.punchedInAt).getTime();
+  if (ms < 0) return;
+  const t = Math.floor(ms / 1000);
+  const txt = `${Math.floor(t/3600)}:${pad(Math.floor(t/60)%60)}:${pad(t%60)}`;
+  $("bar-elapsed").textContent = txt;
+  $("bar-now").textContent = hm(new Date());
+  const day = ymd(new Date());              // 근무 중에는 남은 시간이 같이 줄어듭니다
+  renderToday(periodKey(day), day, true, store.records[day]);
+}
+setInterval(tick, 1000);
+
+/* ────────── 출퇴근 ────────── */
+let place = "office";                                   // 이번 근무의 장소
+
+$("places").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b || store.punchedInAt) return;
+  place = b.dataset.p;
+  // 46시간제는 재택을 주말·공휴일에만 허용합니다
+  if (place === "home" && store.settings.companyType === "B"
+      && B_RULES.homeRestDayOnly && !isRest(ymd(new Date())))
+    toast("46시간제 재택근무는 주말·공휴일에만 가능합니다.");
+  render();
+});
+
+$("btn-in").onclick = () => { store.punchedInAt = new Date().toISOString(); save(); };
+$("btn-out").onclick = () => {
+  const start = new Date(store.punchedInAt), date = ymd(start);
+  // confirm()은 샌드박스 iframe에서 차단되면 false를 돌려줘 조용히 취소됩니다. 쓰지 않습니다
+  const had = !!store.records[date];
+  if (!putRecord(date, { s: hm(start), e: hm(new Date()), t: "work", p: place })) return;
+  store.punchedInAt = null;
+  save();
+  const n = netMin(store.records[date]);
+  if (place === "home" && store.settings.companyType === "B" && n > B_RULES.maxHomeMin)
+    toast(`재택근무 일 최대 12시간을 넘겼습니다 (${fmtDur(n)}).`);
+  else toast(`${PLACES[place][1]} ${fmtDur(n)} 저장했어요.${had ? " 기존 기록은 덮어썼어요." : ""}`, true);
+};
+
+/* ────────── 입력 시트 ────────── */
+let editing = null, sheetPlace = "office";
+const sheetType = () => document.querySelector("input[name=t]:checked").value;
+
+$("place-fields").addEventListener("click", e => {
+  const b = e.target.closest(".opts button");
+  if (!b) return;
+  sheetPlace = b.dataset.v;
+  syncSheet();
+});
+
+function openSheet(date, type = "work") {
+  editing = date;
+  const r = date && store.records[date];
+  $("sheet-title").textContent = r ? "기록 수정" : (type === "work" ? "근무 입력" : "휴가 등록");
+  $("f-date").value  = date || ymd(new Date());
+  $("f-start").value = (r && !isVac(r) && r.s) || store.settings.workStart;
+  $("f-end").value   = (r && !isVac(r) && r.e) || store.settings.workEnd;
+  $("f-hours").max   = Math.round(DAY / 60 * 100) / 100;
+  $("f-hours").value = (r && isVac(r) ? vacMin(r) : DAY) / 60;
+  $("f-dinner").checked = !!(r && r.dinner);
+  sheetPlace = (r && r.p) || "office";
+  document.querySelector(`input[name=t][value="${r ? (isComp(r) ? "comp" : isAnnual(r) ? "vacation" : "work") : type}"]`).checked = true;
+  $("f-delete").hidden = !r;
+  resetDelete();
+  syncSheet();
+  $("sheet").showModal();
+}
+
+function syncSheet() {
+  const t = sheetType(), date = $("f-date").value, isB = store.settings.companyType === "B";
+  $("time-fields").hidden  = t !== "work";
+  $("place-fields").hidden = t !== "work";
+  $("vac-fields").hidden   = t === "work";
+  $("dinner-wrap").hidden  = !isB;
+  for (const b of $("place-fields").querySelector(".opts").children)
+    b.ariaPressed = String(b.dataset.v === sheetPlace);
+
+  if (t !== "work") {
+    const h = Number($("f-hours").value);
+    // 연차 1일 = 하루 소정근로 (A 8시간 / B 9시간 12분)
+    const chips = $("vac-fields").querySelectorAll(".chips button");
+    [DAY, DAY / 2, DAY / 4].forEach((m, i) => {
+      if (!chips[i]) return;
+      chips[i].dataset.h = Math.round(m / 60 * 100) / 100;
+      chips[i].textContent = fmtDur(m).replace(" 00분", "");
+      chips[i].ariaPressed = String(Math.round(h * 60) === m);
+    });
+    if (!(h > 0)) { $("f-hint").textContent = "휴가 시간을 0.5시간 이상 입력해 주세요."; return; }
+
+    const prevRec = editing && store.records[editing];
+    const prev = prevRec && prevRec.t === t ? vacMin(prevRec) : 0;
+    if (t === "comp") {
+      const c = date ? compLedger(date) : null;
+      $("f-hint").textContent = `보상휴가 ${fmtDur(h*60)}${c
+        ? ` · 그날 기준 사용 가능 ${fmtDur(c.live + prev)}${c.live + prev < h*60 ? " — 적립분이 모자랍니다." : ""}` : ""}`;
+      return;
+    }
+    let txt = `${vacName({ t:"vacation", h: h*60 })} · ${fmtDur(h*60)}을 채운 시간으로 인정합니다.`;
+    const { annual } = store.settings;
+    if (annual && date) {
+      const left = annual * DAY - (usedLeave(date) - prev + h * 60);
+      txt += ` 등록하면 연차 잔여 ${fmtDays(left)}${left < 0 ? " — 보유 연차를 넘습니다." : "."}`;
+    }
+    $("f-hint").textContent = txt;
+    return;
+  }
+  const r = { s:$("f-start").value, e:$("f-end").value, t:"work", dinner:$("f-dinner").checked };
+  if (!r.s || !r.e) { $("f-hint").textContent = "출근·퇴근 시각을 입력해 주세요."; return; }
+  const g = grossMin(r), b = breakFor(r), n = netMin(r);
+  let txt = `총 ${fmtDur(g)}${b ? ` − 휴게 ${fmtDur(b)}` : ""} = 실근무 ${fmtDur(n)}`;
+  if (isB && date) {
+    const late = lateNote(r.s);
+    if (late) txt += ` · ${late}`;
+    if (sheetPlace === "home" && !isRest(date)) txt += " · 재택은 주말·공휴일만 가능합니다";
+    if (sheetPlace === "home" && n > B_RULES.maxHomeMin) txt += " · 재택 일 최대 12시간 초과";
+  }
+  if (date && isRest(date))
+    txt += store.settings.comp.enabled
+      ? ` · 휴일근로라 초과로 쌓이고, 보상휴가 ${fmtDur(premiumMin(n))}이 적립됩니다 (${md(expiryOf(periodKey(date)))}까지).`
+      : ` · 휴일근로라 초과로 쌓입니다 (가산 ${fmtDur(premiumMin(n))}).`;
+  $("f-hint").textContent = txt;
+}
+$("form").addEventListener("input", syncSheet);
+$("form").addEventListener("change", syncSheet);
+$("vac-fields").addEventListener("click", e => {
+  const b = e.target.closest(".chips button");
+  if (!b) return;
+  $("f-hours").value = b.dataset.h;
+  syncSheet();
+});
+
+$("f-save").onclick = () => {
+  const date = $("f-date").value;
+  if (!date) return toast("날짜를 입력해 주세요.");
+  const t = sheetType();
+  let rec;
+  if (t === "work") {
+    if (!$("f-start").value || !$("f-end").value) return toast("출근·퇴근 시각을 입력해 주세요.");
+    rec = { s:$("f-start").value, e:$("f-end").value, t:"work", p:sheetPlace };
+    if (store.settings.companyType === "B" && $("f-dinner").checked) rec.dinner = true;
+  } else {
+    const mins = Math.round(Number($("f-hours").value) * 60);
+    if (!(mins >= 30 && mins <= DAY)) return toast(`휴가 시간은 30분 ~ ${fmtDur(DAY)}으로 입력해 주세요.`);
+    rec = { t, h: mins };
+  }
+  if (!putRecord(date, rec)) return;                  // 덮어쓰기는 한 번 더
+  if (editing && editing !== date) delete store.records[editing];
+  view = date.slice(0, 7);
+  save();
+  $("sheet").close();
+  toast(`${md(date)} ${kindOf(rec)} ${fmtDur(netMin(rec))} 저장했어요.`, true);
+};
+/* 기록을 쓰는 유일한 경로. 시트 저장과 퇴근 버튼이 둘 다 여기로 들어옵니다.
+   같은 날짜에 '종류가 다른' 기록이 있으면 한 번 더 눌러야 덮어씁니다 —
+   연차가 근무로 조용히 바뀌어 연차 잔여가 늘어나던 문제 */
+const kindOf = r => r.t === "work" ? "근무" : isComp(r) ? "보상휴가" : "연차";
+let armOver = null;
+
+/* 저장 전에 한 번 더 물어야 하는 경우. 막지는 않고 확인만 받습니다 —
+   밤샘 근무는 진짜로 e < s 이고, 긴 날도 진짜로 있습니다 */
+function askFirst(date, rec) {
+  const old = store.records[date];
+  if (old && kindOf(old) !== kindOf(rec))
+    return `${md(date)}에 이미 ${kindOf(old)} 기록이 있어요. 한 번 더 누르면 ${kindOf(rec)}로 바꿉니다.`;
+  if (rec.t === "work") {
+    if (toMin(rec.e) < toMin(rec.s))
+      return `퇴근이 출근보다 빠릅니다. 밤샘 근무가 맞으면 한 번 더 누르세요 (${fmtDur(netMin(rec))}).`;
+    if (netMin(rec) > 720)
+      return `실근무가 ${fmtDur(netMin(rec))}입니다. 맞으면 한 번 더 누르세요.`;
+  }
+  return null;
+}
+
+let lastUndo = null;                       // 되돌리기 한 번치
+function putRecord(date, rec) {
+  const warn = askFirst(date, rec);
+  if (warn && armOver !== date) {
+    armOver = date;
+    setTimeout(() => { if (armOver === date) armOver = null; }, 5000);
+    toast(warn);
+    return false;
+  }
+  armOver = null;
+  lastUndo = { date, prev: store.records[date] ? { ...store.records[date] } : null };
+  store.records[date] = rec;
+  return true;
+}
+
+function undoLast() {
+  if (!lastUndo) return;
+  const { date, prev } = lastUndo;
+  if (prev) store.records[date] = prev; else delete store.records[date];
+  lastUndo = null;
+  save();
+  toast(`${md(date)} 기록을 되돌렸어요.`);
+}
+
+// 확인 대화상자 대신 '한 번 더 누르기'. 샌드박스에서도 확실히 동작합니다
+let armDelete = false;
+function resetDelete() {
+  armDelete = false;
+  $("f-delete").textContent = "삭제";
+  $("f-delete").classList.remove("danger");
+}
+$("f-delete").onclick = () => {
+  if (!editing) return;
+  if (!armDelete) {
+    armDelete = true;
+    $("f-delete").textContent = "한 번 더";
+    $("f-delete").classList.add("danger");
+    setTimeout(() => { if (armDelete) resetDelete(); }, 3000);
+    return;
+  }
+  delete store.records[editing];
+  save(); resetDelete(); $("sheet").close();
+  toast("기록을 삭제했어요.");
+};
+$("f-cancel").onclick = () => $("sheet").close();
+$("q-vac").onclick    = () => openSheet(null, "vacation");
+$("q-manual").onclick = () => openSheet(null, "work");
+
+/* ────────── 근무 규정 설정 ────────── */
+let draft = {};
+
+function openSetup(first = false) {
+  const g = store.settings;
+  // 첫 설정에선 아무것도 고르지 않은 상태로 시작합니다 — 그래야 아래 저장 가드가 살아납니다
+  draft = { companyType: first ? null : g.companyType };
+  $("c-annual").value = g.annual ?? "";
+  $("c-tenure").value = g.tenure ?? "";
+  $("c-intro").hidden = !first;
+  $("c-title").hidden = first;
+  $("c-cancel").hidden = first;                      // 첫 설정은 건너뛸 수 없습니다
+  $("c-save").textContent = first ? "시작하기" : "저장";
+  paintSetup();
+  $("cfg").showModal();
+}
+
+function paintSetup() {
+  const isA = draft.companyType === "A";
+  for (const g of $("cfg").querySelectorAll(".opts[data-key]"))
+    for (const b of g.children)
+      b.ariaPressed = String(b.dataset.v === String(draft[g.dataset.key]));
+  $("rule-a").hidden = draft.companyType !== "A";   // 아직 안 골랐으면 둘 다 감춥니다
+  $("rule-b").hidden = draft.companyType !== "B";
+  $("rule-head").hidden = !draft.companyType;      // 내용 없는 제목만 남으면 안 됩니다
+  $("annual-note").textContent = isA
+    ? "회계연도(1월 1일) 기준으로 매년 새로 부여됩니다."
+    : "입사한 달을 기준으로 1년 단위로 계산됩니다.";
+
+  const t = $("c-tenure").value.trim();
+  if (t !== "") $("c-annual").value = annualByTenure(Number(t));   // 저장 전에도 바로 보이게
+  $("c-tenure-out").textContent = t === ""
+    ? "근속연수를 넣으면 연차가 자동으로 계산됩니다. 비워 두면 아래에 직접 입력하세요."
+    : `근속 ${Number(t)}년 → 연차 ${annualByTenure(Number(t))}일`;
+
+  // 저장된 설정이 아니라 지금 고른 유형 기준으로 계산합니다
+  const ym = ymd(new Date()).slice(0, 7), [y, m] = ym.split("-").map(Number);
+  const days = new Date(y, m, 0).getDate();
+  let offDays = 0;
+  for (let i = 1; i <= days; i++) {
+    const d = `${ym}-${pad(i)}`;
+    if (isHoliday(d) && !isWeekend(d)) offDays++;
+  }
+  const aTarget = Math.max(0, Math.round(A_RULES.weeklyLegal * days / 7) - offDays * 480);
+  if (!draft.companyType) {
+    $("c-preview").innerHTML = "유형을 고르면 이번 달 목표가 바로 나옵니다.";
+    $("c-save").setAttribute("aria-disabled", "true");
+    return;
+  }
+  $("c-save").removeAttribute("aria-disabled");
+  $("c-preview").innerHTML = isA
+    ? `이번 달(${m}월, ${days}일) 목표 <b>${fmtDur(aTarget)}</b> · ` +
+      `최대 <b>${fmtDur(Math.round(A_RULES.weeklyMax * days / 7))}</b>.<br>` +
+      `10:00 이후 출근하거나 16:00 전에 퇴근하면 코어타임 위반으로 표시됩니다.`
+    : `하루 <b>9시간 12분</b> · 주 <b>46시간</b>. 09:00 출근이면 점심 1시간을 빼고 <b>19:12</b> 퇴근이 기준입니다.<br>` +
+      `월 종합에서 기간 목표를 뺀 만큼이 연장근로 (2시간 단위 정산).`;
+}
+
+$("cfg").addEventListener("click", e => {
+  const b = e.target.closest(".opts button");
+  if (!b) return;
+  draft[b.parentElement.dataset.key] = b.dataset.v;
+  paintSetup();
+});
+$("cfg").addEventListener("input", e => { if (e.target.id === "c-tenure") paintSetup(); });
+
+$("cfg-open").onclick     = () => openSetup();
+$("t-leave-tile").onclick = () => openSetup();
+$("today-card").onclick   = () => openSheet(ymd(new Date()));
+$("scope-tile").onclick   = () => tab("log");
+$("c-cancel").onclick = () => $("cfg").close();
+$("cfg").addEventListener("cancel", e => { if (!store.settings.setup) e.preventDefault(); });
+
+$("c-save").onclick = () => {
+  if (!draft.companyType) return toast("회사 유형을 골라 주세요.");
+  const v = $("c-annual").value.trim(), tn = $("c-tenure").value.trim();
+  const annual = v === "" ? null : Number(v);
+  if (annual !== null && !(annual >= 0 && annual <= 40)) return toast("연차는 0 ~ 40일로 입력해 주세요.");
+  const switched = store.settings.setup && draft.companyType !== store.settings.companyType;
+  const oldDay = DAY;
+  store.settings = {
+    ...store.settings,
+    setup: true,
+    companyType: draft.companyType,
+    tenure: tn === "" ? null : Number(tn),
+    annual,
+  };
+  save();                                    // setStore가 DAY를 다시 계산합니다
+  /* 유형이 바뀌면 하루 길이가 480 ↔ 552분으로 바뀝니다. 연차는 '일' 단위 권리라
+     저장된 분을 같은 비율로 옮겨야 하루가 계속 하루로 남습니다.
+     (안 옮기면 연차 잔여가 14.85일 같은 값이 됩니다.)
+     보상휴가는 실제 초과근무에서 쌓인 '시간'이라 건드리지 않습니다. */
+  if (switched && oldDay !== DAY) {
+    const k = DAY / oldDay;
+    let n = 0;
+    for (const r of Object.values(store.records))
+      if (isAnnual(r) && r.h) { r.h = Math.round(r.h * k); n++; }
+    if (n) { save(); toast(`유형이 바뀌어 연차 기록 ${n}건을 하루 ${fmtDur(DAY)} 기준으로 맞췄어요.`); }
+  }
+  $("cfg").close();
+};
+
+/* 시트를 닫을 때 포커스가 원래 버튼으로 복귀하면서 링이 남습니다.
+   키보드 사용자에게는 필요한 링이라 없애지 않고, 포인터로 연 경우에만 거둡니다 */
+let byPointer = false;
+document.addEventListener("pointerdown", () => byPointer = true, true);
+document.addEventListener("keydown",     () => byPointer = false, true);
+for (const d of document.querySelectorAll("dialog"))
+  d.addEventListener("close", () => { if (byPointer) document.activeElement?.blur(); });
+
+/* ────────── 화면 테마 ────────── */
+/* 기기마다 다르게 쓰고 싶으니 계정이 아니라 이 브라우저에만 저장합니다 */
+const SUN  = '<circle cx="12" cy="12" r="4.1"/><path d="M12 2.6v2.2M12 19.2v2.2M4.5 4.5l1.6 1.6M17.9 17.9l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.5 19.5l1.6-1.6M17.9 6.1l1.6-1.6"/>';
+const MOON = '<path d="M20.3 14.6A8.6 8.6 0 0 1 9.4 3.7a8.6 8.6 0 1 0 10.9 10.9z"/>';
+const sysDark = () => !!window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+
+function applyTheme(t) {
+  const root = document.documentElement;
+  if (t) root.dataset.theme = t; else delete root.dataset.theme;
+  const dark = t ? t === "dark" : sysDark();
+  $("theme-icon").innerHTML = dark ? SUN : MOON;      // 누르면 바뀔 모습을 보여줍니다
+  $("theme-toggle").setAttribute("aria-label", dark ? "라이트 모드로 바꾸기" : "다크 모드로 바꾸기");
+}
+let theme = null;
+try { theme = localStorage.getItem("wl-theme"); } catch (e) {}
+applyTheme(theme);
+$("theme-toggle").onclick = () => {
+  theme = (theme ? theme === "dark" : sysDark()) ? "light" : "dark";
+  try { localStorage.setItem("wl-theme", theme); } catch (e) {}
+  applyTheme(theme);
+};
+
+/* ────────── 주 단위 조정 ────────── */
+let wpWeek = 0;
+
+$("weeks").addEventListener("click", e => {
+  const b = e.target.closest(".wk");
+  if (!b) return;
+  const i = Number(b.dataset.w);
+  wkFilter = wkFilter === i ? null : i;     // 한 번 더 누르면 해제
+  render();
+});
+$("wk-clear").onclick = () => { wkFilter = null; render(); };
+$("wk-edit").onclick  = () => openWeekPlan(wkFilter);
+
+function openWeekPlan(i) {
+  if (i == null) return;                    // 필터가 걸려 있을 때만 열 수 있는 버튼입니다
+  wpWeek = i;
+  const w = weeksOf(view)[wpWeek];
+  $("wp-title").textContent = `${wpWeek + 1}주차`;
+  $("wp-h").value = Math.round(w.target / 60 * 100) / 100;
+  $("wp-note").textContent =
+    `기본값 ${fmtDur(w.base)} · 실근무 ${fmtDur(w.reg + w.ot)}. ` +
+    `주 단위로 조정해도 월 목표 ${fmtDur(targetMin(view))}은 바뀌지 않습니다.`;
+  $("wp").showModal();
+}
+$("wp-cancel").onclick = () => $("wp").close();
+$("wp-reset").onclick = () => {
+  const plan = store.settings.weekPlan[view];
+  if (plan) { delete plan[wpWeek]; if (!Object.keys(plan).length) delete store.settings.weekPlan[view]; }
+  save(); $("wp").close();
+};
+$("wp-save").onclick = () => {
+  const h = Number($("wp-h").value);
+  if (!(h >= 0 && h <= 80)) return toast("0 ~ 80시간으로 입력해 주세요.");
+  const plan = store.settings.weekPlan[view] || (store.settings.weekPlan[view] = {});
+  plan[wpWeek] = Math.round(h * 60);
+  save(); $("wp").close();
+};
+
+/* ────────── 임시 공휴일 ────────── */
+function renderHolidays() {
+  const list = $("hol-list"), ex = [...store.settings.extraHolidays].sort();
+  list.innerHTML = "";
+  if (!ex.length) { list.innerHTML = `<p class="hint">추가한 임시 공휴일이 없어요.</p>`; return; }
+  for (const d of ex) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "holchip";
+    chip.innerHTML = `${d} (${DOW[parseYmd(d).getDay()]})<span>×</span>`;
+    chip.onclick = () => {
+      store.settings.extraHolidays = store.settings.extraHolidays.filter(x => x !== d);
+      save(); renderHolidays();
+    };
+    list.append(chip);
+  }
+}
+$("hol-open").onclick = () => { $("hol-date").value = ""; renderHolidays(); $("hol").showModal(); };
+$("hol-close").onclick = () => $("hol").close();
+$("hol-add").onclick = () => {
+  const d = $("hol-date").value;
+  if (!d) return toast("날짜를 골라 주세요.");
+  if (store.settings.extraHolidays.includes(d)) return toast("이미 등록된 날짜예요.");
+  if (HOLIDAYS.has(d)) return toast("이미 법정공휴일이에요.");
+  store.settings.extraHolidays = [...store.settings.extraHolidays, d];
+  save(); renderHolidays();
+  toast(`${md(d)} 임시 공휴일로 추가했어요.`);
+};
+
+/* ────────── 탭 · 달 이동 ────────── */
+function tab(name) {
+  $("places").hidden    = name !== "today";      // 기록 탭에선 장소를 고를 일이 없습니다
+  $("tab-today").hidden = name !== "today";
+  $("tab-log").hidden   = name !== "log";
+  $("nav-today").ariaSelected = String(name === "today");
+  $("nav-log").ariaSelected   = String(name === "log");
+}
+$("nav-today").onclick = () => tab("today");
+$("nav-log").onclick   = () => { view = ymd(new Date()).slice(0,7); render(); tab("log"); };
+
+function shiftMonth(n) {
+  const [y, m] = view.split("-").map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  view = `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+  wkFilter = null;
+  render();
+}
+$("m-prev").onclick = () => shiftMonth(-1);
+$("m-next").onclick = () => shiftMonth(1);
+
+// 로그인이 필요한 배포본이면 세션이 확인될 때까지 앱을 감춰 둡니다
+const HOSTED = !!(SUPABASE.url && SUPABASE.key) && !IN_ARTIFACT && !LOCAL_FILE;
+if (HOSTED) { $("gate").hidden = false; $("app").hidden = true; $("sticky").hidden = true; }
+
+render();
+// 첫 실행 — 규정부터 묻습니다 (로그인 배포본은 로그인 뒤에)
+if (!HOSTED && !store.settings.setup) openSetup(true);
+
+/* ────────── 자체 검증 ────────── */
+(function check() {
+  const keep = store, keepDay = DAY;
+  const eq = (a, b, why) => { if (a !== b) console.error(`✗ ${why}: ${a} ≠ ${b}`); return a === b; };
+  let ok = true, n = 0;
+  const is = (a, b, why) => { n++; ok &= eq(a, b, why); };
+  const A = () => setStore({ settings:{ companyType:"A" } });
+  const B = () => setStore({ settings:{ companyType:"B" } });
+
+  /* ── 공통 ── */
+  A();
+  is(grossMin({s:"22:00", e:"06:00"}), 480, "자정 넘긴 야간 근무");
+  is(grossMin({s:"09:00", e:"09:00"}), 0, "같은 분에 출퇴근하면 0분 (24시간 아님)");
+  is(overlapMin("11:30","13:30","12:00","13:00"), 60, "점심 구간 전체와 겹침");
+  is(overlapMin("12:30","18:00","12:00","13:00"), 30, "점심에 30분만 걸침");
+  is(overlapMin("10:57","10:57","12:00","13:00"), 0, "0분 근무는 점심과 겹치지 않음");
+  is(overlapMin("22:00","06:00","12:00","13:00"), 0, "야간 근무는 점심을 지나지 않음");
+  is(annualByTenure(0), 11,  "1년 미만 11일");
+  is(annualByTenure(1), 15,  "1년 15일");
+  is(annualByTenure(3), 16,  "3년 16일");
+  is(annualByTenure(5), 17,  "5년 17일");
+  is(annualByTenure(21), 25, "21년 이상 25일 상한");
+  is(premiumMin(480), 720, "휴일근로 8시간 → ×1.5");
+  is(premiumMin(600), 960, "휴일 10시간 → 8h×1.5 + 2h×2");
+  is(expiryOf("2026-09"), "2026-11-30", "보상휴가는 적립월 + 2개월 말일 소멸");
+  is(isRest("2026-09-26"), true, "토요일은 휴일");
+  is(isRest("2026-09-25"), true, "추석은 공휴일");
+  is(isOvertime("2026-09-26", {t:"work"}), true,  "휴일 근무 = 초과");
+  is(isOvertime("2026-09-15", {t:"work"}), false, "평일 근무 = 정규");
+  is(isOvertime("2026-09-26", {t:"vacation", h:480}), false, "휴일의 휴가는 초과 아님");
+  is(fmtDays(240), "0.5일", "4시간 = 0.5일");
+
+  /* ── A유형: 선택적 근로시간제 ── */
+  A();
+  is(fmtDur(targetMin("2026-07")), "169시간 09분", "7월(31일) = 40시간 × 31/7 − 제헌절 8시간");
+  is(targetMin("2026-09"), Math.round(2400 * 30 / 7) - 2 * 480, "9월은 추석 평일 2일(16시간) 차감");
+  is(fmtDur(targetMin("2026-09")), "155시간 26분", "= 171시간 26분 − 16시간");
+  is(targetMin("2026-02"), 2400 * 4 - 3 * 480, "2월은 설 연휴 3일 차감");
+  is(maxMin("2026-02"),    3120 * 4, "2월 최대 근로 가능 = 208시간");
+  is(targetMin("2026-09") === spanMin("2026-09"), false, "평일 수가 아니라 달력 일수 기준");
+  is(period("2026-09").due, "2026-10-05", "근무 등록 마감은 다음 달 5일");
+  is(period("2026-12").due, "2027-01-05", "12월분은 이듬해 1/05 마감");
+  is(netMin({s:"10:00", e:"12:00", t:"work"}), 120, "2시간은 공제 없음");
+  is(netMin({s:"10:00", e:"14:30", t:"work"}), 240, "4시간 30분 체류 → 30분 공제");
+  is(netMin({s:"09:00", e:"18:00", t:"work"}), 480, "9시간 체류 → 1시간 공제");
+  is(netMin({s:"08:00", e:"21:30", t:"work"}), 720, "13시간 30분 체류 → 1시간 30분 공제");
+  is(grossFor(480), 540, "8시간 채우려면 9시간 체류");
+  is(lateNote("09:30", "18:00"), "", "코어타임을 감싸면 정상");
+  is(lateNote("10:01", "18:00") !== "", true, "10시 1분은 코어타임 지각");
+  is(lateNote("09:00", "15:30") !== "", true, "16시 전 퇴근은 조퇴");
+  is(store.settings.startMonth, 1, "연차는 회계연도(1월) 기준");
+  is(store.settings.comp.enabled, true, "연장·휴일 근로는 보상휴가 2개월");
+
+  /* ── B유형: 46시간제 ── */
+  B();
+  is(DAY, 552, "하루 소정근로 9시간 12분");
+  is(weekMin(), 2760, "주 46시간");
+  is(fmtDur(DAY / 2), "4시간 36분", "반차 4시간 36분 — 사내 문서와 일치");
+  is(vacName({ t:"vacation", h:DAY }),     "연차",   "B 연차 1일 = 9시간 12분");
+  is(vacName({ t:"vacation", h:DAY / 2 }), "반차",   "B 반차 = 4시간 36분");
+  is(vacName({ t:"vacation", h:DAY / 4 }), "반반차", "B 반반차 = 2시간 18분");
+  is(vacName({ t:"vacation", h:480 }),     "시간차 8시간", "B에서 8시간은 하루가 아님");
+  is(fmtDays(DAY), "1일", "B도 연차 1일은 1일로 셈");
+  is(period("2026-10").from, "2026-10-05", "10월 시작 = 첫 월요일");
+  is(period("2026-10").to,   "2026-11-01", "10월 종료 = 11월 첫 월요일 전날");
+  is(period("2026-10").weeks, 4, "10월 4주");
+  is(period("2026-10").due,  "2026-11-05", "10월 마감 11/05");
+  is(period("2026-11").from, "2026-11-02", "11월 시작 11/02");
+  is(period("2026-11").to,   "2026-12-06", "11월 종료 12/06");
+  is(period("2026-11").weeks, 5, "11월은 5주");
+  is(period("2026-11").due,  "2026-12-10", "11월 마감 12/10");
+  is(period("2026-12").to,   "2027-01-03", "12월 종료는 이듬해 1/03");
+  is(periodKey("2026-11-01"), "2026-10", "11/01은 10월 기간");
+  is(periodKey("2026-11-02"), "2026-11", "11/02부터 11월 기간");
+  is(gridOffset("2026-10"), 0, "기간이 월요일 시작 → 달력 앞 빈칸 없음");
+  is(4 * 5 * 552, 184 * 60, "공휴일 없는 4주 = 20일 × 9시간 12분 = 184시간 (사내 기준값)");
+  is(targetMin("2026-07"), 19 * 552, "7월 기간(7/06~8/02)은 제헌절이 빠져 19일치");
+  is(targetMin("2026-11"), 46 * 60 * 5, "11월 5주 = 주 46시간 × 5주 = 230시간");
+  is(targetMin("2026-09"), 18 * 552, "9월 기간(9/07~10/04)은 추석 평일 2일이 빠져 18일치");
+  is(netMin({s:"09:00", e:"19:12", t:"work"}), 552, "09:00~19:12 − 점심 1시간 = 9시간 12분");
+  is(netMin({s:"13:00", e:"18:00", t:"work"}), 300, "점심 후 출근이면 5시간에 공제 없음");
+  is(netMin({s:"07:24", e:"12:00", t:"work"}), 276, "오전 반차 4시간 36분 — 점심 전 종료");
+  is(netMin({s:"08:00", e:"12:36", t:"work"}), 240, "12:36까지면 점심에 36분 걸쳐 4시간만 인정");
+  is(netMin({s:"09:00", e:"20:12", dinner:true, t:"work"}), 552, "저녁 휴게를 켜면 1시간 더 공제");
+  is(endForNet("09:00", 552), toMin("19:12"), "9시간 12분 채우려면 09:00 → 19:12");
+  is(endForNet("13:00", 300), toMin("18:00"), "점심 후 출근은 그대로 5시간 뒤");
+  is(lateNote("09:30"), "", "07:00~10:00 출근은 정상");
+  is(lateNote("11:00") !== "", true, "10~12시 사이 출근은 지각");
+  is(lateNote("13:00"), "", "오후 근무 12:00~14:30 출근은 정상");
+
+  /* ── 연장근로: 기간 전체 합산 후 2시간 단위 ── */
+  B();
+  const fill = (ym, rec) => {
+    const o = {};
+    for (const d of periodDays(ym)) if (minsOf(d)) o[d] = { ...rec };
+    return o;
+  };
+  is(Object.keys(fill("2026-11", {})).length, 25, "11월 기간 근무일 25일");
+
+  setStore({ settings:{ companyType:"B" }, records: fill("2026-11", { s:"09:00", e:"20:12", t:"work" }) });
+  is(overtimeSettle("2026-11").raw,  25 * 60, "25일 × 1시간 = 25시간 초과");
+  is(overtimeSettle("2026-11").paid, 24 * 60, "2시간 단위로 끊어 24시간 지급");
+  is(overtimeSettle("2026-11").remainder, 60, "남은 1시간은 미지급");
+
+  const mix = fill("2026-11", { s:"09:00", e:"19:12", t:"work" });
+  mix["2026-11-02"] = { s:"09:00", e:"23:12", t:"work" };
+  mix["2026-11-09"] = { s:"09:00", e:"15:12", t:"work" };
+  setStore({ settings:{ companyType:"B" }, records: mix });
+  is(overtimeSettle("2026-11").raw, 0, "1주 초과와 2주 부족이 월 단위에서 상쇄");
+  is(overtimeSettle("2026-11").rows[0].diff,  240, "주별 내역엔 1주차 +4시간이 보임");
+  is(overtimeSettle("2026-11").rows[1].diff, -240, "2주차는 −4시간");
+
+  const withVac = fill("2026-11", { s:"09:00", e:"19:12", t:"work" });
+  withVac["2026-11-03"] = { t:"vacation", h:552 };
+  setStore({ settings:{ companyType:"B" }, records: withVac });
+  is(overtimeSettle("2026-11").raw, 0, "연차는 근로시간 인정 — 초과를 만들지 않음");
+
+  /* ── 주 단위 조정 ── */
+  setStore({ settings:{ companyType:"B", weekPlan:{ "2026-11": { 0: 3120, 1: 2400 } } } });
+  is(weeksOf("2026-11")[0].target, 3120, "1주차 조정 52시간");
+  is(weeksOf("2026-11")[1].target, 2400, "2주차 조정 40시간");
+  is(weeksOf("2026-11")[2].target, 2760, "조정 안 한 주는 46시간");
+  is(targetMin("2026-11"), 25 * 552, "주를 조정해도 월 목표는 그대로");
+  is(planDrift("2026-11"), 0, "52 + 40 + 46×3 = 230시간 → 월 목표와 일치");
+  is(todayQuota("2026-11", "2026-11-02"), 624, "1주차 52시간이면 하루 몫도 10시간 24분");
+  is(todayQuota("2026-11", "2026-11-09"), 480, "2주차 40시간이면 하루 8시간");
+  setStore({ settings:{ companyType:"B", weekPlan:{ "2026-11": { 0: 3120 } } } });
+  is(planDrift("2026-11"), 360, "1주차만 늘리면 합이 6시간 초과 → 경고");
+
+  /* ── 임시 공휴일 ── */
+  setStore({ settings:{ companyType:"B", extraHolidays:["2026-11-03"] } });
+  is(isRest("2026-11-03"), true, "임시 공휴일로 등록한 평일은 휴일");
+  is(targetMin("2026-11"), 24 * 552, "임시 공휴일 1일만큼 목표가 줄어듦");
+  is(isOvertime("2026-11-03", {t:"work"}), true, "임시 공휴일 근무 = 휴일근로");
+
+  /* ── 연차 · 보상휴가 ── */
+  setStore({ settings:{ companyType:"A", annual:15 },
+             records:{ "2025-12-31":{t:"vacation",h:480}, "2026-01-02":{t:"vacation",h:480},
+                       "2026-12-31":{t:"vacation",h:240} } });
+  is(leavePeriod("2026-09-15").from, "2026-01-01", "회계연도 시작 1/1");
+  is(leavePeriod("2026-09-15").to,   "2026-12-31", "종료 12/31");
+  is(usedLeave("2026-09-15"), 720, "그 해 8h + 4h만 집계 (전년 12/31 제외)");
+
+  setStore({ settings:{ companyType:"A" }, records:{ "2026-09-26":{s:"09:00", e:"19:00", t:"work"} } });
+  is(compLedger("2026-10-01").live, 840, "휴일 9시간 실근무(10h−휴게1h) → 가산 840분");
+  is(compLedger("2026-12-01").expired, 840, "11/30 지나면 소멸");
+  setStore({ settings:{ companyType:"A" },
+             records:{ "2026-09-26":{s:"09:00", e:"19:00", t:"work"}, "2026-10-05":{t:"comp", h:240} } });
+  is(compLedger("2026-10-06").live, 600, "240분 사용 후 잔액 600분");
+  setStore({ settings:{ companyType:"A" }, records:{ "2026-10-05":{t:"comp", h:240} } });
+  is(compLedger("2026-10-06").unmatched, 240, "적립 없이 쓴 보상휴가는 unmatched");
+
+  /* ── 설정 저장 ── */
+  is(normalize({ settings:{ companyType:"B", tenure:3 } }).settings.annual, 16, "근속 3년 → 연차 16일");
+  is(normalize({ records:{ "2026-09-01":{s:"09:00",e:"18:00",t:"work"} } }).settings.setup, true,
+     "기록이 있던 사용자는 설정을 마친 것으로 봄");
+  is(normalize(null).settings.setup, false, "새 사용자는 온보딩부터");
+
+  store = keep; DAY = keepDay;
+  console.log(ok ? `✓ 계산 규칙 ${n}개 통과 (A·B 사내 규정 포함)` : "✗ 계산 규칙 검증 실패 — 위 오류 확인");
+})();
+</script>
