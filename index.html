@@ -62,8 +62,9 @@
   .gate-card { background:var(--surface); box-shadow:var(--lift); border-radius:var(--r-lg);
                padding:32px 26px; max-width:380px; width:100%; text-align:center; }
   .gate-card h1 { font-family:var(--display); font-size:21px; font-weight:700; letter-spacing:-.02em; }
-  .gate-card p { font-size:15px; color:var(--ink-2); line-height:1.65; margin:10px 0 22px; }
+  .gate-card p { font-size:15px; color:var(--ink-2); line-height:1.65; margin:10px 0 22px; text-wrap:balance; }
   .gate-card .hint { margin:16px 0 0; }
+  .nowrap { white-space:nowrap; }
   #g-login { width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
              background:var(--ink); color:var(--surface); border-radius:var(--r-md);
              padding:15px; font-size:15px; font-weight:700; }
@@ -71,6 +72,9 @@
 
   * { box-sizing:border-box; }
   body { background:var(--ground); color:var(--ink); font-family:var(--body); margin:0; -webkit-font-smoothing:antialiased; }
+  /* 한글은 기본값이면 글자 중간에서 줄이 바뀝니다. 단어(띄어쓰기) 단위로 끊고, 띄어쓰기 없는 긴 문자열(이메일 등)만 예외로 자릅니다 */
+  body { word-break:keep-all; overflow-wrap:break-word; }
+  p { text-wrap:pretty; }                           /* 마지막 줄에 한 단어만 남지 않게 */
   /* 아래 16px은 하단바 위 페이드(.sticky::before)가 앉을 자리입니다.
      없으면 다 내려도 마지막 카드가 그만큼 가려집니다 */
   .app { max-width:460px; margin:0 auto; padding:20px 18px 16px; display:flex; flex-direction:column; gap:13px; }
@@ -366,7 +370,7 @@
 <div id="gate" hidden>
   <div class="gate-card">
     <h1>Work Pace</h1>
-    <p>출퇴근을 기록하고 이번 주·이번 달 목표를 한눈에 확인하세요.</p>
+    <p>출퇴근을 기록하고 <span class="nowrap">이번 주·이번 달</span> 목표를 한눈에 확인하세요.</p>
     <button id="g-login">
       <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.7 5.2C42.2 36 45 30.6 45 24z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-6.7-5.2c-1.8 1.3-4.3 2.2-7.8 2.2-5.9 0-11-4-12.8-9.4l-7 5.4C7.8 41 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.2 28.3c-.5-1.4-.8-2.8-.8-4.3s.3-3 .8-4.3l-7-5.4C3.5 17.2 2.7 20.5 2.7 24s.8 6.8 1.5 9.7l7-5.4z"/><path fill="#EA4335" d="M24 9.5c4.2 0 7 1.8 8.6 3.3l6-5.9C34.9 3.5 29.9 1 24 1 15.3 1 7.8 6 4.2 14.3l7 5.4C13 14.3 18.1 9.5 24 9.5z"/></svg>
       Google로 시작하기
@@ -804,7 +808,7 @@ const isAnnual = r => r.t === "vacation" || r.t === "half";            // 연차
 const isVac    = r => isAnnual(r) || isComp(r);                        // 일하지 않고 인정받는 시간
 const vacMin   = r => r.h ?? (r.t === "half" ? DAY/2 : DAY);           // r.h 없으면 구버전 기록
 const vacName  = r => isComp(r) ? "보상휴가" : (m =>
-  m >= DAY ? "연차" : m === DAY/2 ? "반차" : m === DAY/4 ? "반반차" : `시간차 ${m/60}시간`)(vacMin(r));
+  m >= DAY ? "연차" : m === DAY/2 ? "반차" : m === DAY/4 ? "반반차" : `시간차 ${m % 60 ? fmtDur(m) : m / 60 + "시간"}`)(vacMin(r));   // m/60만 쓰면 100분 → 1.666…시간
 
 // 자정을 넘기면 익일로. 출퇴근이 같은 분이면 24시간이 아니라 0분입니다
 function grossMin(r) { const g = toMin(r.e) - toMin(r.s); return g < 0 ? g + 1440 : g; }
@@ -1409,7 +1413,8 @@ function todayQuota(ym, today) {
     const m = minsOf(d);
     if (m && (d === today || !store.records[d])) open += m;
   }
-  return Math.min(MAX_DAY, open ? need * (minsOf(today) / open) : need);
+  // 분 단위로 올림 — 소수 분이 남으면 퇴근 시각이 01:22.666… 처럼 찍힙니다
+  return Math.min(MAX_DAY, open ? Math.ceil(need * minsOf(today) / open) : need);
 }
 
 // 오늘이 속한 주의 집계 + 그 주에서 지나간 소정시간(페이스)
@@ -2262,6 +2267,9 @@ if (!HOSTED && !store.settings.setup) openSetup(true);
   setStore({ settings:{ companyType:"B", setup:true, tenure:3 }, records:{} });
   is(todayQuota("2026-09", "2026-09-18") <= MAX_DAY, true, "밀린 몫도 하루 12시간을 넘지 않음");
   is(todayQuota("2026-09", "2026-09-18"), MAX_DAY, "금요일까지 빈 주는 상한에 걸림");
+  setStore({ settings:{ companyType:"B" }, records:{ "2026-11-09":{s:"09:00", e:"18:23", t:"work"} } });
+  is(Number.isInteger(todayQuota("2026-11", "2026-11-10")), true, "남은 몫을 나눠도 분 단위 정수 (01:22.666… 방지)");
+  is(vacName({ t:"vacation", h:100 }), "시간차 1시간 40분", "시간차 표기에 소수점이 안 붙음");
   setStore({ settings:{ companyType:"B", weekPlan:{ "2026-11": { 0: 3120 } } } });
   is(planDrift("2026-11"), 360, "1주차만 늘리면 합이 6시간 초과 → 경고");
 
