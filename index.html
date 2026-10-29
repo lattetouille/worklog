@@ -1429,8 +1429,10 @@ function todayQuota(ym, today) {
 }
 
 // 오늘이 속한 주의 집계 + 그 주에서 지나간 소정시간(페이스)
+// A유형 주말·공휴일 근무는 채운 시간이 아니라 다음 달 보상휴가로 적립됩니다 (aCompOf)
+const fillsTarget = (d, r) => store.settings.companyType !== "A" || !isOvertime(d, r);
 const filledTo = (days, today) =>
-  days.reduce((m, d) => d <= today && store.records[d] ? m + netMin(store.records[d]) : m, 0);
+  days.reduce((m, d) => d <= today && store.records[d] && fillsTarget(d, store.records[d]) ? m + netMin(store.records[d]) : m, 0);
 
 function thisWeek(ym, today) {
   const wi = weekIndexOf(ym, today);
@@ -1439,7 +1441,7 @@ function thisWeek(ym, today) {
   let pace = 0;
   for (const d of days) if (d < today) pace += minsOf(d);
   return { wi, w, pace, from: days[0], to: days[days.length - 1],
-           filled: w.reg + w.ot, target: w.target };
+           filled: w.reg + (store.settings.companyType === "A" ? 0 : w.ot), target: w.target };
 }
 
 /* 오늘 카드 — 상태·몫·퇴근 시각을 하나로. 별도 타일과 나뉘어 있던 걸 합쳤습니다 */
@@ -1482,7 +1484,7 @@ function renderScopeTile(ym, today, s, wk) {
   if (wk) {
     const o = overtimeSettle(ym);
     $("scope-lab").textContent = "이번 달";
-    $("scope-val").textContent = fmtDur(s.regular + s.overtime);
+    $("scope-val").textContent = fmtDur(s.regular + (store.settings.companyType === "A" ? 0 : s.overtime));
     $("scope-sub").textContent = `목표 ${fmtDur(s.target)}` + (o.paid ? ` · 연장 ${fmtDur(o.paid)}` : "");
   } else {
     const t = thisWeek(ym, today);
