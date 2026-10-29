@@ -1416,7 +1416,7 @@ function todayQuota(ym, today) {
   const w = weeksOf(ym)[wi];
   const rec = store.records[today];
   // 오늘 기록분은 빼고 "이번 주에 아직 남은 목표"를 구합니다
-  const need = w.target - (w.reg + w.ot) + (rec ? netMin(rec) : 0);
+  const need = w.target - (w.reg + (store.settings.companyType === "A" ? 0 : w.ot)) + (rec && fillsTarget(today, rec) ? netMin(rec) : 0);
   if (need <= 0) return 0;
   let open = 0;                                   // 오늘 포함, 아직 기록 없는 근무일의 소정시간
   for (const d of weekDays(ym, wi)) {
@@ -1463,20 +1463,24 @@ function renderToday(ym, today, live, rec) {
     const start = new Date(store.punchedInAt);
     const done = liveNet(), left = quota - done;
     $("bar-since").textContent = `${hm(start)} 출근`;
-    if (!quota || left <= 0) return set("근무 중", "지금 퇴근 가능", "done", "", 1);
-    const endM = endForNet(hm(start), quota);
+    // A유형은 코어타임이 끝나기 전엔 목표를 채워도 퇴근할 수 없습니다 (오늘 출근분만)
+    const coreEnd = store.settings.companyType === "A" && ymd(start) === today ? toMin(A_RULES.core[1]) : 0;
+    const beforeCore = toMin(hm(new Date())) < coreEnd;
+    if ((!quota || left <= 0) && !beforeCore) return set("근무 중", "지금 퇴근 가능", "done", "", 1);
+    const endM = Math.max(quota ? endForNet(hm(start), quota) : 0, coreEnd);
     return set("퇴근 예정", clockOf(endM), "goal",
-      quota >= MAX_DAY ? `${fmtDur(left)} 남음 · 이번 주 목표는 오늘 다 못 채워요`
-                       : `${fmtDur(left)} 남음`, done / quota);
+      left <= 0 || endM === coreEnd ? `코어타임 ${A_RULES.core[1]}까지` + (left > 0 ? ` · ${fmtDur(left)} 남음` : "")
+      : quota >= MAX_DAY ? `${fmtDur(left)} 남음 · 이번 주 목표는 오늘 다 못 채워요`
+                         : `${fmtDur(left)} 남음`, quota ? done / quota : 1);
   }
   if (rec) return set("오늘", fmtDur(netMin(rec)), "",
     isVac(rec) ? vacName(rec) : `${rec.s} – ${rec.e}`,
     quota ? netMin(rec) / quota : 1);
   if (isRest(today)) return set("오늘", "휴일", "", "", 0);
   if (!quota)        return set("오늘", "충족", "done", "", 1);
-  // 출근 전 — 지금 출발했다고 보고 퇴근 시각을 미리 보여줍니다
-  set("퇴근 예정", clockOf(endForNet(hm(new Date()), quota)), "goal",
-      quota >= MAX_DAY ? "지금 출근 기준 · 이번 주 목표는 오늘 다 못 채워요" : "지금 출근 기준", 0);
+  // 출근 전 — 아직 출근 시각이 없으니 오늘 채울 몫만 보여줍니다. 퇴근 예정은 출근하면 나옵니다
+  set("오늘 목표", fmtDur(quota), "goal",
+      quota >= MAX_DAY ? "이번 주 목표는 오늘 다 못 채워요" : "출근하면 퇴근 예정 시각이 나와요", 0);
 }
 
 /* 히어로가 주간이면 타일은 월간, 히어로가 월간이면 타일은 주간 */
